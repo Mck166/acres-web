@@ -1,5 +1,5 @@
 {
-  "name": "acres-web-scaffold",
+  "name": "acres-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "firebase": "^12.18.0",
+    "gray-matter": "^4.0.3",
     "next": "16.3.2",
+    "next-mdx-remote": "^6.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

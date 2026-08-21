@@ -1,0 +1,90 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.count {
+  margin: 0;
+  font-size: 16px;
+  color: var(--acres-brown);
+}
+
+.list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 280px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--acres-brown);
+}
+
+.status h1,
+.status p {
+  margin: 0;
+}
+
+.status h1 {
+  font-size: 24px;
+  color: var(--acres-text);
+}
+
+.status a {
+  color: var(--acres-green);
+  font-weight: 600;
+}
+
+.status button {
+  max-width: 280px;
+}
+
+.status a:hover {
+  text-decoration: underline;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(91, 146, 121, 0.25);
+  border-top-color: var(--acres-green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  color: var(--acres-error);
+}
+
+@media (min-width: 700px) {
+  .list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

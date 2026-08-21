@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Acres Web
 
-## Getting Started
+Public website for [Acres](https://myacresapp.com), built with Next.js and TypeScript. It uses the same Firebase Auth project and MongoDB property API as the mobile app.
 
-First, run the development server:
+## Local setup
+
+1. Copy `.env.example` to `.env.local` and fill in the Firebase web config (the same project as the mobile app: `acres-7f955`).
+2. Confirm Firebase Authentication → Authorized domains includes `localhost`.
+3. Install and run:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The property feed defaults to `https://api.myacresapp.com/api`. Override with `NEXT_PUBLIC_API_BASE_URL` if you are pointing at a local API.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## What is included
 
-## Learn More
+- **Home** — server-rendered property grid from `GET /api/feed`
+- **Login / Sign up** — Firebase email and password
+- **Favorites** — Firestore `users/{uid}/favorites`, hydrated with `POST /api/properties/batch`
+- **Blog** — MDX posts in `content/blog/`
 
-To learn more about Next.js, take a look at the following resources:
+## SEO
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Metadata, Open Graph, `robots.ts`, and `sitemap.ts`
+- First page of listings is rendered in the HTML
+- Blog posts are statically generated
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` — local development
+- `npm run build` — production build
+- `npm run start` — serve the production build
+- `npm run lint` — ESLint

@@ -1,0 +1,64 @@
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.hero {
+  margin-bottom: 28px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--acres-text);
+}
+
+.hero p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--acres-brown);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  display: block;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--acres-surface);
+  border: 1px solid var(--acres-border);
+}
+
+.card:hover {
+  border-color: rgba(91, 146, 121, 0.45);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--acres-text);
+}
+
+.date {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--acres-brown);
+}
+
+.card p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--acres-text);
+}
+
+.empty {
+  color: var(--acres-brown);
+}

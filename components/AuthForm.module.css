@@ -1,0 +1,103 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 180px);
+  padding: 32px 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--acres-text);
+}
+
+.subtitle {
+  margin: 0 0 32px;
+  font-size: 16px;
+  text-align: center;
+  color: var(--acres-brown);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--acres-text);
+}
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 20px;
+  padding: 14px 12px;
+  border: 1px solid var(--acres-border);
+  border-radius: 12px;
+  background: var(--acres-surface);
+  color: var(--acres-text);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.input::placeholder {
+  color: #999;
+}
+
+.input:focus {
+  outline: 2px solid var(--acres-green);
+  outline-offset: 1px;
+}
+
+.inputError {
+  border-color: var(--acres-error);
+  margin-bottom: 6px;
+}
+
+.fieldError {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--acres-error);
+}
+
+.formError {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(192, 67, 63, 0.1);
+  color: var(--acres-error);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.submit {
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.switch {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--acres-brown);
+}
+
+.switch a {
+  color: var(--acres-green);
+  font-weight: 600;
+}
+
+.switch a:hover {
+  text-decoration: underline;
+}
