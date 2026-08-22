@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/components/AuthProvider";
+import { getUserData } from "@/lib/firestore";
+import { getFirebaseAuth } from "@/lib/firebase";
 import GlassButton from "@/components/GlassButton";
 import styles from "@/components/AuthForm.module.css";
 
@@ -56,7 +58,16 @@ export default function LoginForm() {
     setLoading(true);
     try {
       await login(trimmedEmail, password);
-      router.push(nextPath.startsWith("/") ? nextPath : "/");
+      const dest = nextPath.startsWith("/") ? nextPath : "/";
+      const uid = getFirebaseAuth().currentUser?.uid;
+      if (uid) {
+        const profile = await getUserData(uid);
+        if (!profile) {
+          router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
+          return;
+        }
+      }
+      router.push(dest);
     } catch (error) {
       setErrors({ form: messageForError(error) });
     } finally {
@@ -113,7 +124,10 @@ export default function LoginForm() {
           <GlassButton title="Login" type="submit" loading={loading} className={styles.submit} />
         </form>
         <p className={styles.switch}>
-          Don&apos;t have an account? <Link href="/signup">Sign Up</Link>
+          Don&apos;t have an account?{" "}
+          <Link href={nextPath !== "/" ? `/signup?next=${encodeURIComponent(nextPath)}` : "/signup"}>
+            Sign Up
+          </Link>
         </p>
       </div>
     </div>

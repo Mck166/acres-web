@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
         source: "/acres-api/:path*",
         destination: `${API_BASE_URL}/:path*`,
       },
+      {
+        source: "/ns-parcels/:path*",
+        destination:
+          "https://nsgiwa2.novascotia.ca/arcgis/rest/services/PLAN/PLAN_NSPRD_WM84/MapServer/:path*",
+      },
     ];
   },
 };

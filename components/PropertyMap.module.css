@@ -1,0 +1,265 @@
+.page {
+  position: absolute;
+  inset: 0;
+  background: #c6e07c;
+}
+
+.page :global(.maplibregl-canvas) {
+  background: #c6e07c;
+}
+
+.page :global(.maplibregl-ctrl-bottom-right) {
+  right: 16px;
+  bottom: 16px;
+}
+
+.page :global(.maplibregl-ctrl-group) {
+  overflow: hidden;
+  border: 1px solid var(--acres-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(18, 19, 15, 0.12);
+}
+
+.page :global(.maplibregl-ctrl-group button) {
+  width: 36px;
+  height: 36px;
+}
+
+.page :global(.maplibregl-ctrl-attrib) {
+  margin: 0 10px 8px 0;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--acres-brown);
+  font-size: 10px;
+}
+
+.hint,
+.status {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(18, 19, 15, 0.82);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hint {
+  bottom: 20px;
+}
+
+.status {
+  top: 16px;
+}
+
+.pinWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.pin {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 6px 10px 7px;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  box-shadow: 0 3px 10px rgba(18, 19, 15, 0.3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pin::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+  background: inherit;
+}
+
+.pinCount {
+  min-width: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.pinSale {
+  background: #1f6fd0;
+}
+
+.pinSold {
+  background: #c62828;
+}
+
+.pinMixed {
+  background: #e08a2e;
+}
+
+.pinActive {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+/* Sits below the pin's tail without shifting the marker off its coordinate. */
+.badge {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(18, 19, 15, 0.24);
+}
+
+.badgeNew {
+  background: #c62828;
+}
+
+.badgePrice {
+  background: #2e9e4f;
+}
+
+.card {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 3;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 36px rgba(18, 19, 15, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.cardLink {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  color: inherit;
+}
+
+.cardImage,
+.cardPlaceholder {
+  width: 120px;
+  height: 96px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #d8d2d0;
+}
+
+.cardPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--acres-brown);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px;
+}
+
+.cardBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.cardPrice {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--acres-text);
+}
+
+.cardAddress {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--acres-brown);
+}
+
+.cardMeta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--acres-text);
+}
+
+.cardClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(18, 19, 15, 0.08);
+  color: var(--acres-text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cardClose:hover {
+  background: rgba(18, 19, 15, 0.14);
+}
+
+@media (max-width: 640px) {
+  .page :global(.maplibregl-ctrl-bottom-right) {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .card {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .cardLink {
+    grid-template-columns: 96px 1fr;
+  }
+
+  .cardImage,
+  .cardPlaceholder {
+    width: 96px;
+    height: 84px;
+  }
+}

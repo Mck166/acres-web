@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
@@ -31,7 +31,9 @@ function messageForError(error: unknown) {
 
 export default function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signup } = useAuth();
+  const nextPath = searchParams.get("next") || "/properties";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -74,7 +76,8 @@ export default function SignupForm() {
     setLoading(true);
     try {
       await signup(trimmedEmail, password);
-      router.push("/");
+      const dest = nextPath.startsWith("/") ? nextPath : "/";
+      router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
     } catch (error) {
       setErrors({ form: messageForError(error) });
       setLoading(false);
@@ -151,7 +154,10 @@ export default function SignupForm() {
           <GlassButton title="Sign Up" type="submit" loading={loading} className={styles.submit} />
         </form>
         <p className={styles.switch}>
-          Already have an account? <Link href="/login">Login</Link>
+          Already have an account?{" "}
+          <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>
+            Login
+          </Link>
         </p>
       </div>
     </div>

@@ -84,3 +84,19 @@ main {
 .skipLink:focus {
   top: 12px;
 }
+
+body[data-map-page] {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body[data-map-page] main#main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body[data-map-page] [data-site-footer] {
+  display: none;
+}

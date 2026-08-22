@@ -1,0 +1,164 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 180px);
+  padding: 32px 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.progress {
+  margin-bottom: 40px;
+}
+
+.progressBar {
+  height: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #ddd8d7;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--acres-green);
+  transition: width 220ms ease;
+}
+
+.progressText {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--acres-brown);
+}
+
+.question {
+  margin-bottom: 40px;
+}
+
+.question h1 {
+  margin: 0 0 30px;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--acres-text);
+}
+
+.input {
+  width: 100%;
+  min-height: 52px;
+  padding: 18px;
+  border: 2px solid var(--acres-border);
+  border-radius: 14px;
+  background: var(--acres-surface);
+  color: var(--acres-text);
+  font-family: inherit;
+  font-size: 18px;
+  text-align: center;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--acres-green);
+}
+
+.inputError {
+  border-color: var(--acres-error);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.option {
+  min-height: 52px;
+  padding: 18px 24px;
+  border: 2px solid var(--acres-border);
+  border-radius: 14px;
+  background: var(--acres-surface);
+  color: var(--acres-brown);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.option:hover {
+  border-color: var(--acres-green);
+}
+
+.optionSelected {
+  border-color: var(--acres-green);
+  background: var(--acres-green-light);
+  color: var(--acres-green);
+  font-weight: 600;
+}
+
+.error {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--acres-error);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.back,
+.next {
+  flex: 1;
+  min-height: 52px;
+  padding: 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back {
+  border: 2px solid var(--acres-border);
+  background: var(--acres-bg);
+  color: var(--acres-brown);
+}
+
+.back:hover {
+  border-color: var(--acres-brown);
+}
+
+.next {
+  border: none;
+  background: var(--acres-green);
+  color: #fff;
+}
+
+.next:hover:not(:disabled) {
+  background: #4e7f69;
+}
+
+.next:disabled,
+.back:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.status {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--acres-brown);
+}
+
+.status a {
+  color: var(--acres-green);
+  font-weight: 600;
+}

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import SignupForm from "@/components/SignupForm";
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function SignupPage() {
-  return <SignupForm />;
+  return (
+    <Suspense fallback={<p style={{ padding: 32, textAlign: "center" }}>Loading…</p>}>
+      <SignupForm />
+    </Suspense>
+  );
 }

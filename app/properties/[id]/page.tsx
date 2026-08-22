@@ -96,7 +96,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 
   return (
     <article className={styles.page}>
-      <Link href="/" className={styles.back}>
+      <Link href="/properties" className={styles.back}>
         Back to listings
       </Link>
 

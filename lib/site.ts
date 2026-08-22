@@ -1,7 +1,9 @@
 export const SITE_NAME = "Acres";
 
 export const SITE_DESCRIPTION =
-  "Browse homes for sale, save your favorites, and find your next property with Acres.";
+  "Acres is a swipe-based home search app. Browse listings, save favorites, and find your next property — then pick up where you left off on the web.";
+
+export const APP_STORE_URL = "https://apps.apple.com/us/app/acres/id6670382546";
 
 export function getSiteUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";

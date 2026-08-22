@@ -1,0 +1,30 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.hero {
+  margin-bottom: 28px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--acres-text, #12130f);
+}
+
+.hero p {
+  margin: 0;
+  max-width: 640px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--acres-brown);
+}
+
+@media (max-width: 640px) {
+  .hero h1 {
+    font-size: 28px;
+  }
+}

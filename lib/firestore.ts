@@ -4,10 +4,55 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   setDoc,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+
+export type UserProfile = {
+  firstName?: string;
+  lastName?: string;
+  isFirstTimeHomebuyer?: boolean;
+  browsingStatus?: string;
+  phoneNumber?: string;
+  profilePictureUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type OnboardingData = {
+  firstName: string;
+  lastName: string;
+  isFirstTimeHomebuyer: boolean;
+  browsingStatus: string;
+};
+
+export async function getUserData(userId: string): Promise<UserProfile | null> {
+  const db = getFirebaseDb();
+  const userRef = doc(db, "users", userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return null;
+  return userSnap.data() as UserProfile;
+}
+
+export async function saveUserOnboarding(userId: string, onboardingData: OnboardingData) {
+  const db = getFirebaseDb();
+  const userRef = doc(db, "users", userId);
+  const now = new Date().toISOString();
+
+  await setDoc(
+    userRef,
+    {
+      ...onboardingData,
+      createdAt: now,
+      updatedAt: now,
+    },
+    { merge: true },
+  );
+
+  return true;
+}
 
 export type FavoriteRecord = {
   docId: string;

@@ -67,8 +67,11 @@
 }
 
 .logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 40px;
-  padding: 8px 14px;
+  padding: 0 16px;
   border: none;
   border-radius: 12px;
   background: var(--acres-green);
@@ -76,6 +79,7 @@
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -83,14 +87,33 @@
   background: #4e7f69;
 }
 
-.loginLink {
+.loginText {
+  display: inline-flex;
+  align-items: center;
   min-height: 40px;
-  padding: 8px 14px;
+  padding: 8px 12px;
+  color: var(--acres-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.loginText:hover {
+  color: var(--acres-green);
+}
+
+.loginLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
   border-radius: 12px;
   background: var(--acres-green);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
+  text-align: center;
 }
 
 .loginLink:hover {

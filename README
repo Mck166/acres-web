@@ -1,0 +1,15 @@
+Create a basic website for the app. We will use react and typescript. Make the website SEO optimized
+
+follow the apps design.
+
+This should use the same firebase log in and mongo database for the properties. 
+
+We will first make a basic outline with the auth and a home page.
+
+We will test this before continuing.
+
+We will then add a favorites page so the users can see the properties they have in thier favorites from firebase.
+
+We will test this before continuing.
+
+Then we want to create a blog page so we can write some blogs for SEO

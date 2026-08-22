@@ -41,17 +41,48 @@ export type FeedResponse = {
   totalAvailable: number;
 };
 
+export type MapPinType = "price" | "sold" | "listed";
+
+export type MapProperty = {
+  id: string;
+  lat: number;
+  lon: number;
+  price: number | null;
+  priceLabel: string | null;
+  status: string | null;
+  pin: MapPinType | null;
+  pid?: string | null;
+};
+
+export type MapBounds = {
+  minLat: number;
+  minLon: number;
+  maxLat: number;
+  maxLon: number;
+  zoom?: number;
+};
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
   timeout?: number;
   revalidate?: number | false;
+  signal?: AbortSignal;
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, timeout = DEFAULT_TIMEOUT_MS, revalidate } = options;
+  const { method = "GET", body, timeout = DEFAULT_TIMEOUT_MS, revalidate, signal } = options;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const onAbort = () => controller.abort();
+
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener("abort", onAbort);
+    }
+  }
 
   const init: RequestInit = {
     method,
@@ -80,7 +111,29 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     return (await response.json()) as T;
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener("abort", onAbort);
   }
+}
+
+export async function fetchMapProperties(
+  bounds: MapBounds,
+  options: { signal?: AbortSignal; timeout?: number } = {},
+): Promise<MapProperty[]> {
+  const params = new URLSearchParams({
+    min_lat: String(bounds.minLat),
+    min_lon: String(bounds.minLon),
+    max_lat: String(bounds.maxLat),
+    max_lon: String(bounds.maxLon),
+  });
+  if (bounds.zoom != null) params.set("zoom", String(bounds.zoom.toFixed(2)));
+
+  const data = await request<{ properties?: MapProperty[] }>(`/map?${params.toString()}`, {
+    timeout: options.timeout ?? DEFAULT_TIMEOUT_MS,
+    signal: options.signal,
+    revalidate: false,
+  });
+
+  return data.properties || [];
 }
 
 export async function fetchFeed({

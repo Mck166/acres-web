@@ -148,7 +148,7 @@ export default function FavoritesView() {
       <div className={styles.status}>
         <h1>No favorites yet</h1>
         <p>
-          Save properties from the <Link href="/">home page</Link> to see them here.
+          Save properties from the <Link href="/properties">properties page</Link> to see them here.
         </p>
       </div>
     );

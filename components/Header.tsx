@@ -6,7 +6,8 @@ import { useAuth } from "@/components/AuthProvider";
 import styles from "@/components/Header.module.css";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
+  { href: "/properties", label: "Properties" },
+  { href: "/map", label: "Map" },
   { href: "/favorites", label: "Favorites" },
   { href: "/blog", label: "Blog" },
 ];
@@ -50,9 +51,14 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <Link href="/login" className={styles.loginLink}>
-                Login
-              </Link>
+              <>
+                <Link href="/login" className={styles.loginText}>
+                  Login
+                </Link>
+                <Link href="/signup" className={styles.loginLink}>
+                  Sign Up
+                </Link>
+              </>
             )}
           </div>
         </nav>
