@@ -21,10 +21,6 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  icons: {
-    icon: "/favicon.png",
-    apple: "/icon.png",
-  },
   openGraph: {
     type: "website",
     locale: "en_CA",
