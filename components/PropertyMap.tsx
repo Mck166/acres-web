@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import dynamic from "next/dynamic";
 import styles from "@/components/PropertyMap.module.css";
 
@@ -17,5 +17,9 @@ export default function PropertyMap() {
     };
   }, []);
 
-  return <PropertyMapCanvas />;
+  return (
+    <Suspense fallback={<div className={styles.page} />}>
+      <PropertyMapCanvas />
+    </Suspense>
+  );
 }

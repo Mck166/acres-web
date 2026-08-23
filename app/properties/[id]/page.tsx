@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { fetchPropertyById } from "@/lib/api";
+import PropertyBackLink from "@/components/PropertyBackLink";
+import { getPropertyId } from "@/lib/properties";
 import {
   field,
   formatBathLabel,
@@ -94,11 +96,13 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
       })
     : null;
 
+  const propertyId = getPropertyId(property);
+
   return (
     <article className={styles.page}>
-      <Link href="/properties" className={styles.back}>
-        Back to listings
-      </Link>
+      <Suspense fallback={<span className={styles.back}>Back to listings</span>}>
+        <PropertyBackLink propertyId={propertyId} />
+      </Suspense>
 
       <div className={styles.layout}>
         <PropertyGallery photos={photos} alt={address} />

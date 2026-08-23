@@ -26,6 +26,8 @@ type PropertyCardProps = {
   isFavorite?: boolean;
   onFavorite?: (property: Property) => Promise<void> | void;
   onRemove?: (property: Property) => Promise<void> | void;
+  detailHref?: string;
+  onNavigate?: () => void;
 };
 
 export default function PropertyCard({
@@ -33,6 +35,8 @@ export default function PropertyCard({
   isFavorite = false,
   onFavorite,
   onRemove,
+  detailHref,
+  onNavigate,
 }: PropertyCardProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -47,7 +51,7 @@ export default function PropertyCard({
   const baths = getBaths(property);
   const livingArea = getLivingArea(property);
   const id = getPropertyId(property);
-  const href = getPropertyHref(property);
+  const href = detailHref ?? getPropertyHref(property);
 
   const handleFavorite = async (event: MouseEvent) => {
     event.preventDefault();
@@ -80,7 +84,12 @@ export default function PropertyCard({
 
   return (
     <article className={styles.card}>
-      <Link href={href} className={styles.cardLink} aria-label={`${address}, ${price}`}>
+      <Link
+        href={href}
+        className={styles.cardLink}
+        aria-label={`${address}, ${price}`}
+        onClick={() => onNavigate?.()}
+      >
         <div className={styles.imageWrap}>
           {photo && !imageFailed ? (
             <PropertyImage

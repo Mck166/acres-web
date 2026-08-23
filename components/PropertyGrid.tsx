@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   favoriteProperty,
   fetchFeed,
@@ -14,6 +15,14 @@ import {
   removeFromFavorites,
 } from "@/lib/firestore";
 import { getPropertyId } from "@/lib/properties";
+import {
+  buildPropertyDetailHref,
+  clearPropertiesListState,
+  markPropertiesListRestorable,
+  readPropertiesListState,
+  savePropertiesListState,
+  shouldRestorePropertiesList,
+} from "@/lib/navigationState";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
 import PropertyCard from "@/components/PropertyCard";
@@ -32,6 +41,9 @@ export default function PropertyGrid({
   initialHasMore,
   initialError = null,
 }: PropertyGridProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const restoredRef = useRef(false);
   const { user } = useAuth();
   const [properties, setProperties] = useState(initialProperties);
   const [cursor, setCursor] = useState(initialCursor);
@@ -39,6 +51,42 @@ export default function PropertyGrid({
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+
+    if (!shouldRestorePropertiesList(searchParams)) {
+      clearPropertiesListState();
+      return;
+    }
+
+    const saved = readPropertiesListState();
+    if (!saved) return;
+
+    clearPropertiesListState();
+    setProperties(saved.properties);
+    setCursor(saved.cursor);
+    setHasMore(saved.hasMore);
+
+    if (searchParams.get("restore") === "1") {
+      router.replace("/properties", { scroll: false });
+    }
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, saved.scrollY);
+    });
+  }, [router, searchParams]);
+
+  const prepareReturnToList = useCallback(() => {
+    savePropertiesListState({
+      properties,
+      cursor,
+      hasMore,
+      scrollY: window.scrollY,
+    });
+    markPropertiesListRestorable();
+  }, [cursor, hasMore, properties]);
 
   useEffect(() => {
     if (!user) return;
@@ -139,6 +187,8 @@ export default function PropertyGrid({
               property={property}
               isFavorite={Boolean(user) && favoriteIds.has(id)}
               onFavorite={handleFavorite}
+              detailHref={buildPropertyDetailHref(id, { from: "properties" })}
+              onNavigate={prepareReturnToList}
             />
           );
         })}

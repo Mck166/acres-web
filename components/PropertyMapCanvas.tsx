@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import MapGL, {
   Layer,
   Marker,
@@ -27,10 +28,14 @@ import {
   getBaths,
   getBeds,
   getPropertyAddress,
-  getPropertyHref,
   getPropertyPhotos,
   getPropertyPrice,
 } from "@/lib/properties";
+import {
+  buildMapHref,
+  buildPropertyDetailHref,
+  parseMapViewParams,
+} from "@/lib/navigationState";
 import PropertyImage from "@/components/PropertyImage";
 import { loadAcresMapStyle } from "@/lib/mapStyle";
 import {
@@ -109,12 +114,17 @@ function padBounds(bounds: {
 }
 
 export default function PropertyMapCanvas() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const mapRef = useRef<MapRef>(null);
   const debounceRef = useRef<number | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const parcelRequestRef = useRef<AbortController | null>(null);
   const fabricRequestRef = useRef<AbortController | null>(null);
   const ignoreMapClickRef = useRef(false);
+  const restoredPreviewRef = useRef(false);
+  const selectedIdRef = useRef<string | null>(null);
+  const urlView = parseMapViewParams(searchParams);
 
   const [mapStyle, setMapStyle] = useState<StyleSpecification | string | null>(null);
   const [properties, setProperties] = useState<MapProperty[]>([]);
@@ -126,7 +136,7 @@ export default function PropertyMapCanvas() {
   const [clusters, setClusters] = useState<PinCluster[]>([]);
   /** Bumped on every move so clusters re-form against the new screen positions. */
   const [viewTick, setViewTick] = useState(0);
-  const [zoom, setZoom] = useState(INITIAL_VIEW.zoom);
+  const [zoom, setZoom] = useState(urlView?.zoom ?? INITIAL_VIEW.zoom);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState("");
@@ -135,6 +145,33 @@ export default function PropertyMapCanvas() {
     property: Property | null;
     loading: boolean;
   } | null>(null);
+
+  const initialViewState = useMemo(
+    () =>
+      urlView
+        ? { longitude: urlView.lng, latitude: urlView.lat, zoom: urlView.zoom }
+        : INITIAL_VIEW,
+    [urlView],
+  );
+
+  const syncMapUrl = useCallback(
+    (propertyId?: string | null) => {
+      const map = mapRef.current?.getMap();
+      if (!map) return;
+
+      const center = map.getCenter();
+      router.replace(
+        buildMapHref({
+          lng: center.lng,
+          lat: center.lat,
+          zoom: map.getZoom(),
+          property: propertyId ?? null,
+        }),
+        { scroll: false },
+      );
+    },
+    [router],
+  );
 
   const loadViewport = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -172,7 +209,9 @@ export default function PropertyMapCanvas() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
-  }, []);
+
+    syncMapUrl(selectedIdRef.current ?? searchParams.get("property"));
+  }, [searchParams, syncMapUrl]);
 
   const scheduleFetch = useCallback(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -254,19 +293,57 @@ export default function PropertyMapCanvas() {
     return () => controller.abort();
   }, [zoom, viewTick]);
 
-  const openPreview = useCallback((id: string, fromMarker = false) => {
-    if (fromMarker) ignoreMapClickRef.current = true;
-    setPreview({ id, property: null, loading: true });
-    fetchPropertyById(id).then((property) => {
-      setPreview((current) => (current?.id === id ? { id, property, loading: false } : current));
-    });
-  }, []);
+  const openPreview = useCallback(
+    (id: string, fromMarker = false) => {
+      if (fromMarker) ignoreMapClickRef.current = true;
+      setPreview({ id, property: null, loading: true });
+      syncMapUrl(id);
+      fetchPropertyById(id).then((property) => {
+        setPreview((current) => (current?.id === id ? { id, property, loading: false } : current));
+      });
+    },
+    [syncMapUrl],
+  );
 
   const closePreview = useCallback(() => {
     setPreview(null);
-  }, []);
+    syncMapUrl(null);
+  }, [syncMapUrl]);
 
   const selectedId = preview?.id ?? null;
+  selectedIdRef.current = selectedId;
+
+  useEffect(() => {
+    if (restoredPreviewRef.current || !urlView?.property) return;
+    restoredPreviewRef.current = true;
+    openPreview(urlView.property);
+  }, [openPreview, urlView?.property]);
+
+  const detailHref = useMemo(() => {
+    if (!selectedId) return "";
+
+    const map = mapRef.current?.getMap();
+    if (!map) {
+      return buildPropertyDetailHref(selectedId, {
+        from: "map",
+        map: {
+          lng: urlView?.lng ?? INITIAL_VIEW.longitude,
+          lat: urlView?.lat ?? INITIAL_VIEW.latitude,
+          zoom: urlView?.zoom ?? INITIAL_VIEW.zoom,
+        },
+      });
+    }
+
+    const center = map.getCenter();
+    return buildPropertyDetailHref(selectedId, {
+      from: "map",
+      map: {
+        lng: center.lng,
+        lat: center.lat,
+        zoom: map.getZoom(),
+      },
+    });
+  }, [selectedId, urlView, viewTick]);
 
   const activityPins = useMemo(
     () => properties.filter((property) => Boolean(property.pin)),
@@ -370,7 +447,7 @@ export default function PropertyMapCanvas() {
     <div className={styles.page}>
       <MapGL
         ref={mapRef}
-        initialViewState={INITIAL_VIEW}
+        initialViewState={initialViewState}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         maxBounds={MAX_BOUNDS}
@@ -512,7 +589,7 @@ export default function PropertyMapCanvas() {
           >
             ×
           </button>
-          <Link href={getPropertyHref(selectedId)} className={styles.cardLink}>
+          <Link href={detailHref} className={styles.cardLink}>
             {photo ? (
               <PropertyImage className={styles.cardImage} src={photo} alt={address} />
             ) : (
