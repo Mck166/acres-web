@@ -1,4 +1,5 @@
 import type { Property } from "@/lib/api";
+import { getSiteUrl } from "@/lib/site";
 
 export function getPropertyId(property: Property) {
   return String(property._id || "");
@@ -7,6 +8,11 @@ export function getPropertyId(property: Property) {
 export function getPropertyHref(property: Property | string) {
   const id = typeof property === "string" ? property : getPropertyId(property);
   return `/properties/${encodeURIComponent(id)}`;
+}
+
+export function getPropertyShareUrl(property: Property | string) {
+  const site = getSiteUrl().replace(/\/$/, "");
+  return `${site}${getPropertyHref(property)}`;
 }
 
 export function getPropertyPhotos(property: Property): string[] {

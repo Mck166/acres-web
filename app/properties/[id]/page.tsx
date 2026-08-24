@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { fetchPropertyById } from "@/lib/api";
 import PropertyBackLink from "@/components/PropertyBackLink";
-import { getPropertyId } from "@/lib/properties";
+import PropertyFavoriteButton from "@/components/PropertyFavoriteButton";
+import PropertyShareButton from "@/components/PropertyShareButton";
+import PropertyGallery from "@/components/PropertyGallery";
+import { SITE_NAME } from "@/lib/site";
 import {
   field,
   formatBathLabel,
@@ -13,12 +16,12 @@ import {
   getBeds,
   getLivingArea,
   getPropertyAddress,
+  getPropertyHref,
+  getPropertyId,
   getPropertyPhotos,
   getPropertyPrice,
+  getPropertyShareUrl,
 } from "@/lib/properties";
-import PropertyFavoriteButton from "@/components/PropertyFavoriteButton";
-import PropertyGallery from "@/components/PropertyGallery";
-import { SITE_NAME } from "@/lib/site";
 import styles from "./page.module.css";
 
 type PropertyPageProps = {
@@ -38,15 +41,26 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   const price = getPropertyPrice(property);
   const photos = getPropertyPhotos(property);
   const description = `${address} listed at ${price} on ${SITE_NAME}.`;
+  const href = getPropertyHref(property);
 
   return {
     title: address,
     description,
+    alternates: {
+      canonical: href,
+    },
     openGraph: {
       type: "article",
       title: `${address} | ${SITE_NAME}`,
       description,
+      url: href,
       images: photos[0] ? [{ url: photos[0], alt: address }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${address} | ${SITE_NAME}`,
+      description,
+      images: photos[0] ? [photos[0]] : undefined,
     },
   };
 }
@@ -97,6 +111,8 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
     : null;
 
   const propertyId = getPropertyId(property);
+  const shareUrl = getPropertyShareUrl(property);
+  const shareText = `${address} listed at ${price} on ${SITE_NAME}.`;
 
   return (
     <article className={styles.page}>
@@ -117,7 +133,10 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               {livingArea ? <span className={styles.badge}>{livingArea}</span> : null}
             </div>
           </div>
-          <PropertyFavoriteButton property={property} />
+          <div className={styles.headerActions}>
+            <PropertyShareButton url={shareUrl} title={`${address} | ${SITE_NAME}`} text={shareText} />
+            <PropertyFavoriteButton property={property} />
+          </div>
         </header>
 
         <div className={styles.sections}>

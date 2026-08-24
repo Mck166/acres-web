@@ -4,6 +4,18 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.myacresapp.com/api";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+      {
+        source: "/.well-known/assetlinks.json",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

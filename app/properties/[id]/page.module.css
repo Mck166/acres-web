@@ -29,6 +29,13 @@
   gap: 16px;
 }
 
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .header h1 {
   margin: 0 0 8px;
   font-size: 32px;
