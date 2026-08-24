@@ -14,7 +14,7 @@ import MapGL, {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { setWorkerUrl } from "maplibre-gl";
-import { fetchMapProperties, fetchPropertyById, type MapProperty, type Property } from "@/lib/api";
+import { fetchMapProperties, fetchMapSearch, fetchPropertyById, type MapProperty, type MapSearchFilters, type Property } from "@/lib/api";
 import {
   clusterPins,
   listingKind,
@@ -37,6 +37,7 @@ import {
   parseMapViewParams,
 } from "@/lib/navigationState";
 import PropertyImage from "@/components/PropertyImage";
+import MapSearchPanel from "@/components/MapSearchPanel";
 import { loadAcresMapStyle } from "@/lib/mapStyle";
 import {
   buildListingLots,
@@ -67,6 +68,7 @@ const LOT_LABEL_MIN_ZOOM = 16;
 const FABRIC_MIN_ZOOM = 16;
 const FETCH_DEBOUNCE_MS = 300;
 const BOUNDS_PAD = 0.12;
+const SEARCH_FLY_ZOOM = 16;
 
 const FOR_SALE = "#1f6fd0";
 const FOR_SALE_DARK = "#1a5cad";
@@ -119,11 +121,13 @@ export default function PropertyMapCanvas() {
   const mapRef = useRef<MapRef>(null);
   const debounceRef = useRef<number | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const searchRequestRef = useRef<AbortController | null>(null);
   const parcelRequestRef = useRef<AbortController | null>(null);
   const fabricRequestRef = useRef<AbortController | null>(null);
   const ignoreMapClickRef = useRef(false);
   const restoredPreviewRef = useRef(false);
   const selectedIdRef = useRef<string | null>(null);
+  const searchActiveRef = useRef(false);
   const urlView = parseMapViewParams(searchParams);
 
   const [mapStyle, setMapStyle] = useState<StyleSpecification | string | null>(null);
@@ -140,6 +144,11 @@ export default function PropertyMapCanvas() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchEmpty, setSearchEmpty] = useState(false);
+  const [searchCount, setSearchCount] = useState(0);
   const [preview, setPreview] = useState<{
     id: string;
     property: Property | null;
@@ -177,10 +186,14 @@ export default function PropertyMapCanvas() {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const bounds = map.getBounds();
     const nextZoom = map.getZoom();
     setZoom(nextZoom);
     setViewTick((tick) => tick + 1);
+    syncMapUrl(selectedIdRef.current ?? searchParams.get("property"));
+
+    if (searchActiveRef.current) return;
+
+    const bounds = map.getBounds();
 
     requestRef.current?.abort();
     const controller = new AbortController();
@@ -209,8 +222,6 @@ export default function PropertyMapCanvas() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
-
-    syncMapUrl(selectedIdRef.current ?? searchParams.get("property"));
   }, [searchParams, syncMapUrl]);
 
   const scheduleFetch = useCallback(() => {
@@ -231,6 +242,7 @@ export default function PropertyMapCanvas() {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
       requestRef.current?.abort();
+      searchRequestRef.current?.abort();
       parcelRequestRef.current?.abort();
       fabricRequestRef.current?.abort();
     };
@@ -310,6 +322,86 @@ export default function PropertyMapCanvas() {
     syncMapUrl(null);
   }, [syncMapUrl]);
 
+  const frameSearchResults = useCallback((results: MapProperty[]) => {
+    const map = mapRef.current?.getMap();
+    if (!map || results.length === 0) return;
+
+    if (results.length === 1) {
+      map.flyTo({
+        center: [results[0].lon, results[0].lat],
+        zoom: Math.max(map.getZoom(), SEARCH_FLY_ZOOM),
+        duration: 800,
+      });
+      return;
+    }
+
+    const minLat = Math.min(...results.map((item) => item.lat));
+    const maxLat = Math.max(...results.map((item) => item.lat));
+    const minLon = Math.min(...results.map((item) => item.lon));
+    const maxLon = Math.max(...results.map((item) => item.lon));
+    map.fitBounds(
+      [
+        [minLon, minLat],
+        [maxLon, maxLat],
+      ],
+      {
+        padding: { top: 96, bottom: 96, left: 48, right: 48 },
+        maxZoom: SEARCH_FLY_ZOOM,
+        duration: 800,
+      },
+    );
+  }, []);
+
+  const handleSearch = useCallback(
+    (query: { q: string; filters: MapSearchFilters }) => {
+      searchRequestRef.current?.abort();
+      requestRef.current?.abort();
+      const controller = new AbortController();
+      searchRequestRef.current = controller;
+      setSearching(true);
+      setError(null);
+      setSearchEmpty(false);
+
+      fetchMapSearch(query, { signal: controller.signal })
+        .then((response) => {
+          if (controller.signal.aborted) return;
+          searchActiveRef.current = true;
+          setSearchActive(true);
+          setSearchOpen(false);
+          setSearching(false);
+          setProperties(response.properties);
+          setSearchCount(response.properties.length);
+          setSearchEmpty(response.properties.length === 0);
+
+          if (response.properties.length === 1) {
+            openPreview(response.properties[0].id);
+          } else {
+            closePreview();
+          }
+          frameSearchResults(response.properties);
+        })
+        .catch((loadError: unknown) => {
+          if (isAbortError(loadError)) return;
+          console.error("Error searching listings:", loadError);
+          setSearching(false);
+          setError("Could not search listings.");
+        });
+    },
+    [closePreview, frameSearchResults, openPreview],
+  );
+
+  const handleClearSearch = useCallback(() => {
+    searchRequestRef.current?.abort();
+    searchActiveRef.current = false;
+    setSearchActive(false);
+    setSearchEmpty(false);
+    setSearchCount(0);
+    setSearching(false);
+    setSearchOpen(false);
+    closePreview();
+    loadViewport();
+  }, [closePreview, loadViewport]);
+
   const selectedId = preview?.id ?? null;
   selectedIdRef.current = selectedId;
 
@@ -346,9 +438,11 @@ export default function PropertyMapCanvas() {
   }, [selectedId, urlView, viewTick]);
 
   const activityPins = useMemo(
-    // Sold properties should keep their lot outlines, but we don't show "price" pins for them.
-    () => properties.filter((property) => Boolean(property.pin) && listingKind(property) !== "sold"),
-    [properties],
+    () =>
+      searchActive
+        ? properties
+        : properties.filter((property) => Boolean(property.pin) && listingKind(property) !== "sold"),
+    [properties, searchActive],
   );
 
   // Clustering needs the map's current projection, so it runs after render, not during it.
@@ -574,11 +668,27 @@ export default function PropertyMapCanvas() {
         <NavigationControl position="bottom-right" showCompass={false} />
       </MapGL>
 
-      {loading ? <p className={styles.status}>Updating listings…</p> : null}
-      {error && !loading ? <p className={styles.status}>{error}</p> : null}
-      {zoom < QUIET_MIN_ZOOM && !loading && !error && !selectedId ? (
+      {loading || searching ? (
+        <p className={styles.status}>{searching ? "Searching…" : "Updating listings…"}</p>
+      ) : null}
+      {error && !loading && !searching ? <p className={styles.status}>{error}</p> : null}
+      {searchActive && searchEmpty && !searching && !error ? (
+        <p className={styles.status}>No matching listings</p>
+      ) : null}
+      {zoom < QUIET_MIN_ZOOM && !loading && !error && !selectedId && !searchActive ? (
         <p className={styles.hint}>Zoom in to see all listings</p>
       ) : null}
+
+      <MapSearchPanel
+        open={searchOpen}
+        searching={searching}
+        active={searchActive}
+        empty={searchEmpty}
+        resultCount={searchCount}
+        onToggle={() => setSearchOpen((current) => !current)}
+        onSearch={handleSearch}
+        onClear={handleClearSearch}
+      />
 
       {selectedId ? (
         <article className={styles.card}>

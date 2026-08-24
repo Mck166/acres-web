@@ -55,7 +55,131 @@
 }
 
 .status {
-  top: 16px;
+  top: calc(16px + var(--acres-embed-top, env(safe-area-inset-top, 0px)));
+}
+
+.searchDock {
+  position: absolute;
+  top: calc(16px + var(--acres-embed-top, env(safe-area-inset-top, 0px)));
+  left: 16px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: min(360px, calc(100% - 32px));
+}
+
+.searchButton,
+.searchChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(35, 60, 50, 0.9);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(18, 19, 15, 0.16);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  cursor: pointer;
+}
+
+.searchButtonOpen,
+.searchChip {
+  background: rgba(35, 60, 50, 0.96);
+}
+
+.searchChip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+.searchPanel {
+  width: 100%;
+  max-height: min(70dvh, 520px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 36px rgba(18, 19, 15, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.searchField,
+.searchFilters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--acres-brown);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.searchField input,
+.searchFilters input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--acres-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--acres-text);
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.searchField {
+  margin-bottom: 12px;
+}
+
+.searchFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.searchActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.searchSubmit,
+.searchReset {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.searchSubmit {
+  border: none;
+  background: var(--acres-green);
+  color: #fff;
+}
+
+.searchSubmit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.searchReset {
+  border: 1px solid var(--acres-border);
+  background: transparent;
+  color: var(--acres-text);
 }
 
 .pinWrap {
@@ -245,6 +369,11 @@
   .page :global(.maplibregl-ctrl-bottom-right) {
     right: 10px;
     bottom: 10px;
+  }
+
+  .searchDock {
+    left: 10px;
+    max-width: calc(100% - 20px);
   }
 
   .card {

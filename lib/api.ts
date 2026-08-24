@@ -115,6 +115,63 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 }
 
+export type MapSearchFilters = {
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  minBeds?: number | null;
+  maxBeds?: number | null;
+  minBaths?: number | null;
+  maxBaths?: number | null;
+  minSqft?: number | null;
+  maxSqft?: number | null;
+};
+
+export type MapSearchResponse = {
+  properties: MapProperty[];
+  total: number;
+  truncated: boolean;
+};
+
+export async function fetchMapSearch(
+  query: { q?: string; filters?: MapSearchFilters },
+  options: { signal?: AbortSignal; timeout?: number } = {},
+): Promise<MapSearchResponse> {
+  const params = new URLSearchParams();
+  const q = query.q?.trim();
+  if (q) params.set("q", q);
+
+  const filters = query.filters || {};
+  const numeric: [string, number | null | undefined][] = [
+    ["min_price", filters.minPrice],
+    ["max_price", filters.maxPrice],
+    ["min_beds", filters.minBeds],
+    ["max_beds", filters.maxBeds],
+    ["min_baths", filters.minBaths],
+    ["max_baths", filters.maxBaths],
+    ["min_sqft", filters.minSqft],
+    ["max_sqft", filters.maxSqft],
+  ];
+  for (const [key, value] of numeric) {
+    if (value != null && Number.isFinite(value)) params.set(key, String(value));
+  }
+
+  const data = await request<{
+    properties?: MapProperty[];
+    total?: number;
+    truncated?: boolean;
+  }>(`/search?${params.toString()}`, {
+    timeout: options.timeout ?? DEFAULT_TIMEOUT_MS,
+    signal: options.signal,
+    revalidate: false,
+  });
+
+  return {
+    properties: data.properties || [],
+    total: data.total ?? (data.properties || []).length,
+    truncated: Boolean(data.truncated),
+  };
+}
+
 export async function fetchMapProperties(
   bounds: MapBounds,
   options: { signal?: AbortSignal; timeout?: number } = {},
