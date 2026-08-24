@@ -17,12 +17,14 @@ export type ProjectPoint = (lon: number, lat: number) => { x: number; y: number 
 export const CLUSTER_RADIUS_PX = 54;
 
 /**
- * The only lot colours the data supports. Status is either FOR SALE or SOLD, and
- * the API already drops sold homes once they fall outside its recency window.
+ * Lot colour follows listing state, not the day's activity pin. Pending homes
+ * stay blue (they are still on the market). Only a closed sale is red.
  */
 export function listingKind(property: MapProperty): ListingKind {
   if (property.pin === "sold") return "sold";
-  return String(property.status || "").toLowerCase().includes("sold") ? "sold" : "sale";
+  const status = String(property.status || "").toLowerCase();
+  if (status.includes("pending")) return "sale";
+  return status.includes("sold") ? "sold" : "sale";
 }
 
 export function pinTone(items: MapProperty[]): PinTone {

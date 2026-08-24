@@ -12,15 +12,18 @@ import {
   formatBathLabel,
   formatBedLabel,
   formatDetailValue,
+  formatEventDate,
   getBaths,
   getBeds,
   getLivingArea,
   getPropertyAddress,
+  getPropertyDescription,
   getPropertyHref,
   getPropertyId,
   getPropertyPhotos,
   getPropertyPrice,
   getPropertyShareUrl,
+  truncateDescription,
 } from "@/lib/properties";
 import styles from "./page.module.css";
 
@@ -40,7 +43,10 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   const address = getPropertyAddress(property);
   const price = getPropertyPrice(property);
   const photos = getPropertyPhotos(property);
-  const description = `${address} listed at ${price} on ${SITE_NAME}.`;
+  const listingDescription = getPropertyDescription(property);
+  const description = listingDescription
+    ? truncateDescription(listingDescription)
+    : `${address} listed at ${price} on ${SITE_NAME}.`;
   const href = getPropertyHref(property);
 
   return {
@@ -102,17 +108,15 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const baths = getBaths(property);
   const livingArea = getLivingArea(property);
   const listingUrl = field(property, "url");
-  const listedAt = property.date_added
-    ? new Date(String(property.date_added)).toLocaleDateString("en-CA", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+  const listedAt = formatEventDate(property.listed_on);
+  const priceChangedAt = formatEventDate(property.price_changed_on);
+  const pendingAt = formatEventDate(property.pending_on);
+  const soldAt = formatEventDate(property.sold_on);
 
   const propertyId = getPropertyId(property);
   const shareUrl = getPropertyShareUrl(property);
   const shareText = `${address} listed at ${price} on ${SITE_NAME}.`;
+  const listingDescription = getPropertyDescription(property);
 
   return (
     <article className={styles.page}>
@@ -140,6 +144,13 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
         </header>
 
         <div className={styles.sections}>
+          {listingDescription ? (
+            <section className={styles.section}>
+              <h2>Description</h2>
+              <p className={styles.description}>{listingDescription}</p>
+            </section>
+          ) : null}
+
           <DetailSection
             title="Property Details"
             rows={[
@@ -211,6 +222,24 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                 <div className={styles.row}>
                   <dt>Listed</dt>
                   <dd>{listedAt}</dd>
+                </div>
+              ) : null}
+              {priceChangedAt ? (
+                <div className={styles.row}>
+                  <dt>Price changed</dt>
+                  <dd>{priceChangedAt}</dd>
+                </div>
+              ) : null}
+              {pendingAt ? (
+                <div className={styles.row}>
+                  <dt>Pending</dt>
+                  <dd>{pendingAt}</dd>
+                </div>
+              ) : null}
+              {soldAt ? (
+                <div className={styles.row}>
+                  <dt>Sold</dt>
+                  <dd>{soldAt}</dd>
                 </div>
               ) : null}
               {listingUrl ? (

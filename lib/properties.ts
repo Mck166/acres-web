@@ -66,11 +66,48 @@ export function getLivingArea(property: Property) {
   return String(value);
 }
 
+export function getPropertyDescription(property: Property) {
+  const value = property.Description ?? property.description;
+  if (value === null || value === undefined || value === "") return null;
+  const text = String(value).replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
+export function truncateDescription(text: string, maxLength = 160) {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= maxLength) return cleaned;
+  const sliced = cleaned.slice(0, maxLength - 1);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const clipped = (lastSpace > 80 ? sliced.slice(0, lastSpace) : sliced).trim();
+  return `${clipped}…`;
+}
+
 export function formatDetailValue(value: unknown) {
   if (value === null || value === undefined || value === "" || value === "N/A") {
     return "Not specified";
   }
   return String(value);
+}
+
+const EVENT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  timeZone: "America/Halifax",
+};
+
+/** Calendar date from an MLS event timestamp, hiding missing values. */
+export function formatEventDate(value: unknown, locale = "en-CA"): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  const text = String(value);
+  const ymd = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (ymd) {
+    const date = new Date(Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12));
+    return date.toLocaleDateString(locale, EVENT_DATE_OPTIONS);
+  }
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleDateString(locale, EVENT_DATE_OPTIONS);
 }
 
 export function field(property: Property, ...keys: string[]) {

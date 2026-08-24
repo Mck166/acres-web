@@ -86,6 +86,13 @@
   color: var(--acres-text);
 }
 
+.description {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--acres-text);
+}
+
 .rows {
   display: grid;
   grid-template-columns: 1fr;

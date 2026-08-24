@@ -282,6 +282,18 @@
   background: #2e9e4f;
 }
 
+.badgePending {
+  background: #8b5a2b;
+}
+
+.badgeSold {
+  background: #c62828;
+}
+
+.pinPending {
+  background: #8b5a2b;
+}
+
 .card {
   position: absolute;
   left: 16px;

@@ -23,6 +23,8 @@ export type Property = {
   Photo_Count?: number;
   PID?: string;
   url?: string;
+  Description?: string;
+  description?: string;
   BEDS?: string | number;
   Beds?: string | number;
   beds?: string | number;
@@ -41,7 +43,7 @@ export type FeedResponse = {
   totalAvailable: number;
 };
 
-export type MapPinType = "price" | "sold" | "listed";
+export type MapPinType = "price" | "sold" | "listed" | "pending";
 
 export type MapProperty = {
   id: string;

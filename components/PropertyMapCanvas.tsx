@@ -94,6 +94,8 @@ function isAbortError(error: unknown) {
 function pinBadge(property: MapProperty) {
   if (property.pin === "listed") return { text: "NEW", className: styles.badgeNew };
   if (property.pin === "price") return { text: "NEW PRICE", className: styles.badgePrice };
+  if (property.pin === "pending") return { text: "PENDING", className: styles.badgePending };
+  if (property.pin === "sold") return { text: "SOLD", className: styles.badgeSold };
   return null;
 }
 
@@ -438,10 +440,7 @@ export default function PropertyMapCanvas() {
   }, [selectedId, urlView, viewTick]);
 
   const activityPins = useMemo(
-    () =>
-      searchActive
-        ? properties
-        : properties.filter((property) => Boolean(property.pin) && listingKind(property) !== "sold"),
+    () => (searchActive ? properties : properties.filter((property) => Boolean(property.pin))),
     [properties, searchActive],
   );
 
@@ -648,7 +647,13 @@ export default function PropertyMapCanvas() {
                   type="button"
                   className={[
                     styles.pin,
-                    tone === "sold" ? styles.pinSold : tone === "mixed" ? styles.pinMixed : styles.pinSale,
+                    tone === "sold"
+                      ? styles.pinSold
+                      : tone === "mixed"
+                        ? styles.pinMixed
+                        : count === 1 && first.pin === "pending"
+                          ? styles.pinPending
+                          : styles.pinSale,
                     count > 1 ? styles.pinCount : "",
                     selected ? styles.pinActive : "",
                   ]
