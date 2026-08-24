@@ -15,6 +15,19 @@ const EMPTY_FILTERS = {
   maxSqft: "",
 };
 
+const FILTER_GROUPS: {
+  label: string;
+  min: keyof typeof EMPTY_FILTERS;
+  max: keyof typeof EMPTY_FILTERS;
+  minPlaceholder: string;
+  maxPlaceholder: string;
+}[] = [
+  { label: "Price", min: "minPrice", max: "maxPrice", minPlaceholder: "Min", maxPlaceholder: "Max" },
+  { label: "Beds", min: "minBeds", max: "maxBeds", minPlaceholder: "Min", maxPlaceholder: "Max" },
+  { label: "Baths", min: "minBaths", max: "maxBaths", minPlaceholder: "Min", maxPlaceholder: "Max" },
+  { label: "Sqft", min: "minSqft", max: "maxSqft", minPlaceholder: "Min", maxPlaceholder: "Max" },
+];
+
 function toNumber(value: string): number | null {
   const cleaned = String(value).replace(/[^\d.]/g, "");
   if (!cleaned) return null;
@@ -33,6 +46,7 @@ type MapSearchPanelProps = {
   empty: boolean;
   resultCount: number;
   onToggle: () => void;
+  onClose: () => void;
   onSearch: (query: { q: string; filters: MapSearchFilters }) => void;
   onClear: () => void;
 };
@@ -44,6 +58,7 @@ export default function MapSearchPanel({
   empty,
   resultCount,
   onToggle,
+  onClose,
   onSearch,
   onClear,
 }: MapSearchPanelProps) {
@@ -59,6 +74,10 @@ export default function MapSearchPanel({
     const term = q.trim();
     if (!term && !hasAnyFilter(filters)) return;
 
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onClose();
     onSearch({
       q: term,
       filters: {
@@ -122,78 +141,27 @@ export default function MapSearchPanel({
           </label>
 
           <div className={styles.searchFilters}>
-            <label>
-              <span>Min price</span>
-              <input
-                inputMode="numeric"
-                value={filters.minPrice}
-                onChange={(event) => setFilter("minPrice", event.target.value)}
-                placeholder="$0"
-              />
-            </label>
-            <label>
-              <span>Max price</span>
-              <input
-                inputMode="numeric"
-                value={filters.maxPrice}
-                onChange={(event) => setFilter("maxPrice", event.target.value)}
-                placeholder="No limit"
-              />
-            </label>
-            <label>
-              <span>Min beds</span>
-              <input
-                inputMode="numeric"
-                value={filters.minBeds}
-                onChange={(event) => setFilter("minBeds", event.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label>
-              <span>Max beds</span>
-              <input
-                inputMode="numeric"
-                value={filters.maxBeds}
-                onChange={(event) => setFilter("maxBeds", event.target.value)}
-                placeholder="Any"
-              />
-            </label>
-            <label>
-              <span>Min baths</span>
-              <input
-                inputMode="numeric"
-                value={filters.minBaths}
-                onChange={(event) => setFilter("minBaths", event.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label>
-              <span>Max baths</span>
-              <input
-                inputMode="numeric"
-                value={filters.maxBaths}
-                onChange={(event) => setFilter("maxBaths", event.target.value)}
-                placeholder="Any"
-              />
-            </label>
-            <label>
-              <span>Min sqft</span>
-              <input
-                inputMode="numeric"
-                value={filters.minSqft}
-                onChange={(event) => setFilter("minSqft", event.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label>
-              <span>Max sqft</span>
-              <input
-                inputMode="numeric"
-                value={filters.maxSqft}
-                onChange={(event) => setFilter("maxSqft", event.target.value)}
-                placeholder="Any"
-              />
-            </label>
+            {FILTER_GROUPS.map((group) => (
+              <div key={group.label} className={styles.searchFilterGroup}>
+                <span>{group.label}</span>
+                <div className={styles.searchFilterPair}>
+                  <input
+                    inputMode="numeric"
+                    value={filters[group.min]}
+                    onChange={(event) => setFilter(group.min, event.target.value)}
+                    placeholder={group.minPlaceholder}
+                    aria-label={`${group.label} minimum`}
+                  />
+                  <input
+                    inputMode="numeric"
+                    value={filters[group.max]}
+                    onChange={(event) => setFilter(group.max, event.target.value)}
+                    placeholder={group.maxPlaceholder}
+                    aria-label={`${group.label} maximum`}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className={styles.searchActions}>

@@ -102,11 +102,11 @@
 
 .searchPanel {
   width: 100%;
-  max-height: min(70dvh, 520px);
+  max-height: min(58dvh, 420px);
   overflow: auto;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 14px 36px rgba(18, 19, 15, 0.18);
   backdrop-filter: blur(16px);
@@ -114,7 +114,7 @@
 }
 
 .searchField,
-.searchFilters label {
+.searchFilterGroup {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -126,11 +126,12 @@
 }
 
 .searchField input,
-.searchFilters input {
+.searchFilterPair input {
   width: 100%;
-  padding: 10px 12px;
+  min-width: 0;
+  padding: 8px 10px;
   border: 1px solid var(--acres-border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
   color: var(--acres-text);
   font-size: 15px;
@@ -140,19 +141,25 @@
 }
 
 .searchField {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .searchFilters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.searchFilterPair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .searchActions {
   display: flex;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .searchSubmit,
@@ -374,6 +381,17 @@
   .searchDock {
     left: 10px;
     max-width: calc(100% - 20px);
+  }
+
+  .searchPanel {
+    max-height: min(52dvh, 380px);
+    padding: 10px;
+  }
+
+  .searchField input,
+  .searchFilterPair input {
+    padding: 8px 9px;
+    font-size: 16px;
   }
 
   .card {

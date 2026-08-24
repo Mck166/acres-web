@@ -686,6 +686,7 @@ export default function PropertyMapCanvas() {
         empty={searchEmpty}
         resultCount={searchCount}
         onToggle={() => setSearchOpen((current) => !current)}
+        onClose={() => setSearchOpen(false)}
         onSearch={handleSearch}
         onClear={handleClearSearch}
       />
