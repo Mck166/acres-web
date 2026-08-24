@@ -346,7 +346,8 @@ export default function PropertyMapCanvas() {
   }, [selectedId, urlView, viewTick]);
 
   const activityPins = useMemo(
-    () => properties.filter((property) => Boolean(property.pin)),
+    // Sold properties should keep their lot outlines, but we don't show "price" pins for them.
+    () => properties.filter((property) => Boolean(property.pin) && listingKind(property) !== "sold"),
     [properties],
   );
 
