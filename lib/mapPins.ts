@@ -46,7 +46,7 @@ export function pinLabel(property: MapProperty): string {
 export function listingBadge(
   property: MapProperty,
   detail?: { Status?: string | null } | null,
-): { text: string; tone: "sold" | "pending" | "listed" | "price" } | null {
+): { text: string; tone: "sold" | "pending" | "listed" | "price" } {
   if (property.pin === "pending") return { text: "Pending", tone: "pending" };
   if (property.pin === "sold") return { text: "Sold", tone: "sold" };
   if (property.pin === "listed") return { text: "New listing", tone: "listed" };
@@ -55,7 +55,8 @@ export function listingBadge(
   const status = String(property.status || detail?.Status || "").toLowerCase();
   if (status.includes("pending")) return { text: "Pending", tone: "pending" };
   if (status.includes("sold")) return { text: "Sold", tone: "sold" };
-  return null;
+  if (status.includes("price")) return { text: "New price", tone: "price" };
+  return { text: "New listing", tone: "listed" };
 }
 
 const CLUSTER_ORDER = { listed: 0, price: 1, pending: 2, sold: 3 } as const;
@@ -66,9 +67,9 @@ export function sortClusterItems(
   detailsById?: Map<string, { Status?: string | null }>,
 ): MapProperty[] {
   return [...items].sort((left, right) => {
-    const leftTone = listingBadge(left, detailsById?.get(left.id))?.tone;
-    const rightTone = listingBadge(right, detailsById?.get(right.id))?.tone;
-    return (leftTone ? CLUSTER_ORDER[leftTone] : 4) - (rightTone ? CLUSTER_ORDER[rightTone] : 4);
+    const leftTone = listingBadge(left, detailsById?.get(left.id)).tone;
+    const rightTone = listingBadge(right, detailsById?.get(right.id)).tone;
+    return CLUSTER_ORDER[leftTone] - CLUSTER_ORDER[rightTone];
   });
 }
 

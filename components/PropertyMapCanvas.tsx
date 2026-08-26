@@ -110,13 +110,21 @@ function isAbortError(error: unknown) {
 function isMapEmbed() {
   if (typeof window === "undefined") return false;
   const embed = window as AcresEmbedWindow;
-  return Boolean(embed.ReactNativeWebView) || typeof embed.__acresOverlayBottom === "number";
+  return (
+    Boolean(embed.ReactNativeWebView) ||
+    typeof embed.__acresOverlayBottom === "number" ||
+    document.documentElement.getAttribute("data-acres-embed") === "1"
+  );
 }
 
 function embedOverlayBottom() {
   if (typeof window === "undefined") return 16;
   const value = (window as AcresEmbedWindow).__acresOverlayBottom;
-  return typeof value === "number" ? value : 16;
+  if (typeof value === "number") return value + 12;
+  const css = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue("--acres-embed-bottom"),
+  );
+  return Number.isFinite(css) ? css + 12 : 16;
 }
 
 function pinClass(tone: ReturnType<typeof pinTone>) {

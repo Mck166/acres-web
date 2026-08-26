@@ -13,8 +13,16 @@ import {
   getPropertyPhotos,
   getPropertyPrice,
 } from "@/lib/properties";
+import PropertyImage from "@/components/PropertyImage";
 import { listingBadge, sortClusterItems } from "@/lib/mapPins";
 import styles from "@/components/PropertyMap.module.css";
+
+const STATUS_COLORS = {
+  listed: "#1f6fd0",
+  price: "#2e9e4f",
+  pending: "#8b5a2b",
+  sold: "#c62828",
+} as const;
 
 type MapView = {
   lng: number;
@@ -72,7 +80,20 @@ export default function MapClusterList({
       ) : null}
       <aside
         className={`${styles.clusterList} ${embed ? styles.clusterListEmbed : ""}`}
-        style={embed ? { bottom: overlayBottom } : undefined}
+        style={
+          embed
+            ? {
+                top: 24,
+                right: 18,
+                bottom: overlayBottom,
+                left: 18,
+                width: "auto",
+                maxWidth: "none",
+                borderRadius: 28,
+                overflow: "hidden",
+              }
+            : { borderRadius: 24, overflow: "hidden" }
+        }
         aria-label={countLabel}
         data-acres-cluster-list=""
       >
@@ -102,28 +123,26 @@ export default function MapClusterList({
           const baths = property ? getBaths(property) : null;
           const href = buildPropertyDetailHref(item.id, { from: "map", map: mapView });
           const badge = listingBadge(item, property);
-          const statusClass =
-            badge?.tone === "sold"
-              ? styles.clusterStatusSold
-              : badge?.tone === "pending"
-                ? styles.clusterStatusPending
-                : badge?.tone === "listed"
-                  ? styles.clusterStatusListed
-                  : badge?.tone === "price"
-                    ? styles.clusterStatusPrice
-                    : "";
 
           return (
-            <Link key={item.id} href={href} className={styles.clusterRow}>
+            <Link
+              key={item.id}
+              href={href}
+              className={styles.clusterRow}
+              data-acres-pin={item.pin || badge.tone}
+            >
               {photo ? (
                 <PropertyImage className={styles.cardImage} src={photo} alt={address} />
               ) : (
                 <div className={styles.cardPlaceholder}>{loading && !property ? "Loading…" : "No photo available"}</div>
               )}
               <div className={styles.cardBody}>
-                {badge ? (
-                  <span className={`${styles.clusterStatus} ${statusClass}`}>{badge.text}</span>
-                ) : null}
+                <span
+                  className={styles.clusterStatus}
+                  style={{ backgroundColor: STATUS_COLORS[badge.tone] }}
+                >
+                  {badge.text}
+                </span>
                 <p className={styles.cardPrice}>{price}</p>
                 <p className={styles.cardAddress}>{address}</p>
                 {beds || baths ? (
