@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import { APP_STORE_URL } from "@/lib/site";
 import styles from "@/components/IosAppBanner.module.css";
 
@@ -8,6 +9,11 @@ const STORAGE_KEY = "acres-ios-app-banner-dismissed";
 
 const listeners = new Set<() => void>();
 let dismissedThisSession = false;
+
+type AcresEmbedWindow = Window & {
+  ReactNativeWebView?: unknown;
+  __acresOverlayBottom?: number;
+};
 
 function subscribe(onStoreChange: () => void) {
   listeners.add(onStoreChange);
@@ -21,6 +27,15 @@ function emitChange() {
 function isStandaloneApp() {
   const nav = window.navigator as Navigator & { standalone?: boolean };
   return Boolean(nav.standalone) || window.matchMedia("(display-mode: standalone)").matches;
+}
+
+function isAcresAppEmbed() {
+  const embed = window as AcresEmbedWindow;
+  return (
+    Boolean(embed.ReactNativeWebView) ||
+    typeof embed.__acresOverlayBottom === "number" ||
+    document.documentElement.getAttribute("data-acres-embed") === "1"
+  );
 }
 
 function isIosDevice() {
@@ -43,11 +58,13 @@ function shouldShowBanner() {
     // Private browsing can block storage; still show the prompt.
   }
 
-  return isIosDevice() && !isStandaloneApp();
+  return isIosDevice() && !isStandaloneApp() && !isAcresAppEmbed();
 }
 
 export default function IosAppBanner() {
-  const visible = useSyncExternalStore(subscribe, shouldShowBanner, () => false);
+  const pathname = usePathname();
+  const eligible = useSyncExternalStore(subscribe, shouldShowBanner, () => false);
+  const visible = eligible && pathname !== "/map";
 
   useEffect(() => {
     if (!visible) {
@@ -74,7 +91,12 @@ export default function IosAppBanner() {
   };
 
   return (
-    <div className={styles.banner} role="region" aria-label="Download the Acres iPhone app">
+    <div
+      className={styles.banner}
+      data-acres-app-banner
+      role="region"
+      aria-label="Download the Acres iPhone app"
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={styles.icon} src="/icon.png" alt="" width={40} height={40} />
       <div className={styles.copy}>
