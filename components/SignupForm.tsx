@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
+import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -76,6 +77,7 @@ export default function SignupForm() {
     setLoading(true);
     try {
       await signup(trimmedEmail, password);
+      logEvent("sign_up", { method: "password" });
       const dest = nextPath.startsWith("/") ? nextPath : "/";
       router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
     } catch (error) {

@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getUserData } from "@/lib/firestore";
 import { getFirebaseAuth } from "@/lib/firebase";
 import GlassButton from "@/components/GlassButton";
+import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
 function messageForError(error: unknown) {
@@ -58,6 +59,7 @@ export default function LoginForm() {
     setLoading(true);
     try {
       await login(trimmedEmail, password);
+      logEvent("login", { method: "password" });
       const dest = nextPath.startsWith("/") ? nextPath : "/";
       const uid = getFirebaseAuth().currentUser?.uid;
       if (uid) {

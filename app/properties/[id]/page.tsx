@@ -7,6 +7,7 @@ import PropertyBackLink from "@/components/PropertyBackLink";
 import PropertyFavoriteButton from "@/components/PropertyFavoriteButton";
 import PropertyShareButton from "@/components/PropertyShareButton";
 import PropertyGallery from "@/components/PropertyGallery";
+import PropertyViewTracker from "@/components/PropertyViewTracker";
 import { SITE_NAME } from "@/lib/site";
 import {
   field,
@@ -193,6 +194,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 
   return (
     <article className={styles.page}>
+      <PropertyViewTracker itemId={propertyId} itemName={address} price={price} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: stringifyJsonLd(getPropertyJsonLd(property)) }}
