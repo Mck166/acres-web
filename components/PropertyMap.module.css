@@ -312,15 +312,22 @@
   -webkit-backdrop-filter: blur(16px);
 }
 
+.clusterBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border: none;
+  background: rgba(18, 19, 15, 0.38);
+  cursor: pointer;
+}
+
 .clusterListEmbed {
-  top: var(--acres-embed-top, env(safe-area-inset-top, 0px));
-  left: 0;
-  right: 0;
+  top: calc(12px + var(--acres-embed-top, env(safe-area-inset-top, 0px)));
+  left: 12px;
+  right: 12px;
   width: auto;
   max-width: none;
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
+  border-radius: 22px;
 }
 
 .clusterListHeader {
@@ -328,19 +335,34 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px 10px;
+  padding: 14px 14px 12px 18px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(18, 19, 15, 0.08);
 }
 
 .clusterListTitle {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--acres-text);
 }
 
-.clusterListHeader .cardClose {
-  position: static;
+.clusterClose {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(18, 19, 15, 0.08);
+  color: var(--acres-text);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.clusterClose:hover,
+.clusterClose:focus-visible {
+  background: rgba(18, 19, 15, 0.14);
 }
 
 .clusterListBody {
@@ -368,6 +390,27 @@
 .clusterRow:hover,
 .clusterRow:focus-visible {
   background: rgba(18, 19, 15, 0.06);
+}
+
+.clusterThumb {
+  position: relative;
+  display: block;
+}
+
+.clusterBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(18, 19, 15, 0.24);
 }
 
 .card {
@@ -504,7 +547,8 @@
   }
 
   .clusterListEmbed {
-    left: 0;
+    left: 10px;
+    right: 10px;
     width: auto;
   }
 

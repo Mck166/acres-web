@@ -12,7 +12,7 @@ import {
   getPropertyPhotos,
   getPropertyPrice,
 } from "@/lib/properties";
-import PropertyImage from "@/components/PropertyImage";
+import { listingBadge } from "@/lib/mapPins";
 import styles from "@/components/PropertyMap.module.css";
 
 type MapView = {
@@ -42,21 +42,35 @@ export default function MapClusterList({
 }: MapClusterListProps) {
   const byId = new Map(details.map((property) => [String(property._id), property]));
 
+  const countLabel = `${items.length} ${items.length === 1 ? "property" : "properties"}`;
+
   return (
-    <aside
-      className={`${styles.clusterList} ${embed ? styles.clusterListEmbed : ""}`}
-      style={embed ? { bottom: overlayBottom } : undefined}
-      aria-label={`${items.length} listings at this location`}
-    >
-      <header className={styles.clusterListHeader}>
-        <p className={styles.clusterListTitle}>
-          {items.length} listing{items.length === 1 ? "" : "s"}
-        </p>
-        <button type="button" className={styles.cardClose} onClick={onClose} aria-label="Close listing list">
-          ×
-        </button>
-      </header>
-      <div className={styles.clusterListBody}>
+    <>
+      {embed ? (
+        <button
+          type="button"
+          className={styles.clusterBackdrop}
+          onClick={onClose}
+          aria-label="Close property list"
+        />
+      ) : null}
+      <aside
+        className={`${styles.clusterList} ${embed ? styles.clusterListEmbed : ""}`}
+        style={embed ? { bottom: overlayBottom } : undefined}
+        aria-label={countLabel}
+      >
+        <div className={styles.clusterListHeader}>
+          <p className={styles.clusterListTitle}>{countLabel}</p>
+          <button
+            type="button"
+            className={styles.clusterClose}
+            onClick={onClose}
+            aria-label="Close property list"
+          >
+            ×
+          </button>
+        </div>
+        <div className={styles.clusterListBody}>
         {items.map((item) => {
           const property = byId.get(item.id) ?? null;
           const photos = property ? getPropertyPhotos(property) : [];
@@ -66,14 +80,30 @@ export default function MapClusterList({
           const beds = property ? getBeds(property) : null;
           const baths = property ? getBaths(property) : null;
           const href = buildPropertyDetailHref(item.id, { from: "map", map: mapView });
+          const badge = listingBadge(item);
+          const badgeClass =
+            badge?.tone === "sold"
+              ? styles.badgeSold
+              : badge?.tone === "pending"
+                ? styles.badgePending
+                : badge?.tone === "listed"
+                  ? styles.badgeNew
+                  : badge?.tone === "price"
+                    ? styles.badgePrice
+                    : "";
 
           return (
             <Link key={item.id} href={href} className={styles.clusterRow}>
-              {photo ? (
-                <PropertyImage className={styles.cardImage} src={photo} alt={address} />
-              ) : (
-                <div className={styles.cardPlaceholder}>{loading && !property ? "Loading…" : "No photo available"}</div>
-              )}
+              <span className={styles.clusterThumb}>
+                {photo ? (
+                  <PropertyImage className={styles.cardImage} src={photo} alt={address} />
+                ) : (
+                  <div className={styles.cardPlaceholder}>{loading && !property ? "Loading…" : "No photo available"}</div>
+                )}
+                {badge ? (
+                  <span className={`${styles.clusterBadge} ${badgeClass}`}>{badge.text}</span>
+                ) : null}
+              </span>
               <div className={styles.cardBody}>
                 <p className={styles.cardPrice}>{price}</p>
                 <p className={styles.cardAddress}>{address}</p>
@@ -88,7 +118,8 @@ export default function MapClusterList({
             </Link>
           );
         })}
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   );
 }
