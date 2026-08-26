@@ -1,7 +1,7 @@
 import type { MapProperty } from "@/lib/api";
 import type { ListingKind } from "@/lib/parcels";
 
-export type PinTone = "sale" | "sold" | "mixed";
+export type PinTone = "sale" | "sold" | "pending" | "mixed";
 
 export type PinCluster = {
   key: string;
@@ -17,24 +17,28 @@ export type ProjectPoint = (lon: number, lat: number) => { x: number; y: number 
 export const CLUSTER_RADIUS_PX = 54;
 
 /**
- * Lot colour follows listing state, not the day's activity pin. Pending homes
- * stay blue (they are still on the market). Only a closed sale is red.
+ * Lot and pin colour follow listing state. Pending is brown, a closed sale is
+ * red, and everything still on the market is blue. A leftover sold pin must
+ * not paint a still-pending home red.
  */
 export function listingKind(property: MapProperty): ListingKind {
-  if (property.pin === "sold") return "sold";
   const status = String(property.status || "").toLowerCase();
-  if (status.includes("pending")) return "sale";
+  if (property.pin === "pending" || status.includes("pending")) return "pending";
+  if (property.pin === "sold") return "sold";
   return status.includes("sold") ? "sold" : "sale";
 }
 
 export function pinTone(items: MapProperty[]): PinTone {
   const kinds = new Set(items.map(listingKind));
   if (kinds.size > 1) return "mixed";
-  return kinds.has("sold") ? "sold" : "sale";
+  if (kinds.has("sold")) return "sold";
+  if (kinds.has("pending")) return "pending";
+  return "sale";
 }
 
 export function pinLabel(property: MapProperty): string {
   if (property.pin === "sold") return property.priceLabel || "Sold";
+  if (property.pin === "pending") return property.priceLabel || "Pending";
   return property.priceLabel || "New";
 }
 

@@ -7,7 +7,7 @@ type ArcGisFeature = {
   properties?: { PID?: string | number };
 };
 
-export type ListingKind = "sale" | "sold";
+export type ListingKind = "sale" | "sold" | "pending";
 
 export type ListingForParcel = {
   id: string;

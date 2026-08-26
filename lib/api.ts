@@ -228,7 +228,10 @@ export async function fetchFeed({
   };
 }
 
-export async function fetchPropertiesByIds(ids: string[]): Promise<Property[]> {
+export async function fetchPropertiesByIds(
+  ids: string[],
+  options: { signal?: AbortSignal } = {},
+): Promise<Property[]> {
   const cleanIds = (ids || []).filter(Boolean).map(String);
   if (cleanIds.length === 0) return [];
 
@@ -236,6 +239,7 @@ export async function fetchPropertiesByIds(ids: string[]): Promise<Property[]> {
     method: "POST",
     body: { ids: cleanIds },
     revalidate: false,
+    signal: options.signal,
   });
 
   return data.properties || [];

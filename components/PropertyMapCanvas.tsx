@@ -14,7 +14,15 @@ import MapGL, {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { setWorkerUrl } from "maplibre-gl";
-import { fetchMapProperties, fetchMapSearch, fetchPropertyById, type MapProperty, type MapSearchFilters, type Property } from "@/lib/api";
+import {
+  fetchMapProperties,
+  fetchMapSearch,
+  fetchPropertiesByIds,
+  fetchPropertyById,
+  type MapProperty,
+  type MapSearchFilters,
+  type Property,
+} from "@/lib/api";
 import {
   clusterPins,
   listingKind,
@@ -38,6 +46,7 @@ import {
 } from "@/lib/navigationState";
 import PropertyImage from "@/components/PropertyImage";
 import MapSearchPanel from "@/components/MapSearchPanel";
+import MapClusterList from "@/components/MapClusterList";
 import { loadAcresMapStyle } from "@/lib/mapStyle";
 import {
   buildListingLots,
@@ -74,6 +83,8 @@ const FOR_SALE = "#1f6fd0";
 const FOR_SALE_DARK = "#1a5cad";
 const SOLD = "#c62828";
 const SOLD_DARK = "#a92120";
+const PENDING = "#8b5a2b";
+const PENDING_DARK = "#704820";
 const NEUTRAL_LOT = "#b4ada2";
 
 /** Keep the camera over Nova Scotia and nearby water so zoom-out never hits empty globe/world. */
@@ -87,8 +98,32 @@ const MAX_BOUNDS: [number, number, number, number] = [-70.4, 41.7, -55.6, 48.9];
  */
 setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
+type AcresEmbedWindow = Window & {
+  ReactNativeWebView?: unknown;
+  __acresOverlayBottom?: number;
+};
+
 function isAbortError(error: unknown) {
   return error instanceof Error && error.name === "AbortError";
+}
+
+function isMapEmbed() {
+  if (typeof window === "undefined") return false;
+  const embed = window as AcresEmbedWindow;
+  return Boolean(embed.ReactNativeWebView) || typeof embed.__acresOverlayBottom === "number";
+}
+
+function embedOverlayBottom() {
+  if (typeof window === "undefined") return 16;
+  const value = (window as AcresEmbedWindow).__acresOverlayBottom;
+  return typeof value === "number" ? value : 16;
+}
+
+function pinClass(tone: ReturnType<typeof pinTone>) {
+  if (tone === "sold") return styles.pinSold;
+  if (tone === "pending") return styles.pinPending;
+  if (tone === "mixed") return styles.pinMixed;
+  return styles.pinSale;
 }
 
 function pinBadge(property: MapProperty) {
@@ -126,6 +161,7 @@ export default function PropertyMapCanvas() {
   const searchRequestRef = useRef<AbortController | null>(null);
   const parcelRequestRef = useRef<AbortController | null>(null);
   const fabricRequestRef = useRef<AbortController | null>(null);
+  const clusterRequestRef = useRef<AbortController | null>(null);
   const ignoreMapClickRef = useRef(false);
   const restoredPreviewRef = useRef(false);
   const selectedIdRef = useRef<string | null>(null);
@@ -154,6 +190,12 @@ export default function PropertyMapCanvas() {
   const [preview, setPreview] = useState<{
     id: string;
     property: Property | null;
+    loading: boolean;
+  } | null>(null);
+  const [clusterList, setClusterList] = useState<{
+    key: string;
+    items: MapProperty[];
+    details: Property[];
     loading: boolean;
   } | null>(null);
 
@@ -247,6 +289,7 @@ export default function PropertyMapCanvas() {
       searchRequestRef.current?.abort();
       parcelRequestRef.current?.abort();
       fabricRequestRef.current?.abort();
+      clusterRequestRef.current?.abort();
     };
   }, []);
 
@@ -307,9 +350,16 @@ export default function PropertyMapCanvas() {
     return () => controller.abort();
   }, [zoom, viewTick]);
 
+  const closeClusterList = useCallback(() => {
+    clusterRequestRef.current?.abort();
+    setClusterList(null);
+  }, []);
+
   const openPreview = useCallback(
     (id: string, fromMarker = false) => {
       if (fromMarker) ignoreMapClickRef.current = true;
+      clusterRequestRef.current?.abort();
+      setClusterList(null);
       setPreview({ id, property: null, loading: true });
       syncMapUrl(id);
       fetchPropertyById(id).then((property) => {
@@ -379,6 +429,7 @@ export default function PropertyMapCanvas() {
             openPreview(response.properties[0].id);
           } else {
             closePreview();
+            closeClusterList();
           }
           frameSearchResults(response.properties);
         })
@@ -389,7 +440,7 @@ export default function PropertyMapCanvas() {
           setError("Could not search listings.");
         });
     },
-    [closePreview, frameSearchResults, openPreview],
+    [closeClusterList, closePreview, frameSearchResults, openPreview],
   );
 
   const handleClearSearch = useCallback(() => {
@@ -401,8 +452,9 @@ export default function PropertyMapCanvas() {
     setSearching(false);
     setSearchOpen(false);
     closePreview();
+    closeClusterList();
     loadViewport();
-  }, [closePreview, loadViewport]);
+  }, [closeClusterList, closePreview, loadViewport]);
 
   const selectedId = preview?.id ?? null;
   selectedIdRef.current = selectedId;
@@ -450,6 +502,11 @@ export default function PropertyMapCanvas() {
     setClusters(clusterPins(map ? (lon, lat) => map.project([lon, lat]) : null, activityPins));
   }, [activityPins, viewTick]);
 
+  const clusterIds = useMemo(
+    () => new Set(clusterList?.items.map((item) => item.id) ?? []),
+    [clusterList],
+  );
+
   const lotListings = useMemo(
     () =>
       properties.map((property) => ({
@@ -459,9 +516,9 @@ export default function PropertyMapCanvas() {
         pid: property.pid,
         kind: listingKind(property),
         label: property.priceLabel || "",
-        selected: selectedId === property.id,
+        selected: selectedId === property.id || clusterIds.has(property.id),
       })),
-    [properties, selectedId],
+    [clusterIds, properties, selectedId],
   );
 
   const lotGeoJson = useMemo(
@@ -497,8 +554,9 @@ export default function PropertyMapCanvas() {
         return;
       }
       closePreview();
+      closeClusterList();
     },
-    [closePreview, openPreview],
+    [closeClusterList, closePreview, openPreview],
   );
 
   const handleClusterClick = useCallback(
@@ -511,14 +569,34 @@ export default function PropertyMapCanvas() {
       }
 
       ignoreMapClickRef.current = true;
-      const map = mapRef.current?.getMap();
-      map?.easeTo({
-        center: [cluster.lon, cluster.lat],
-        zoom: Math.min(MAX_ZOOM, map.getZoom() + 2),
-        duration: 400,
-      });
+      closePreview();
+      clusterRequestRef.current?.abort();
+      const controller = new AbortController();
+      clusterRequestRef.current = controller;
+
+      const items = cluster.items;
+      setClusterList({ key: cluster.key, items, details: [], loading: true });
+      syncMapUrl(null);
+
+      fetchPropertiesByIds(
+        items.map((item) => item.id),
+        { signal: controller.signal },
+      )
+        .then((details) => {
+          if (controller.signal.aborted) return;
+          setClusterList((current) =>
+            current?.key === cluster.key ? { ...current, details, loading: false } : current,
+          );
+        })
+        .catch((loadError: unknown) => {
+          if (isAbortError(loadError)) return;
+          console.error("Error loading clustered listings:", loadError);
+          setClusterList((current) =>
+            current?.key === cluster.key ? { ...current, loading: false } : current,
+          );
+        });
     },
-    [openPreview],
+    [closePreview, openPreview, syncMapUrl],
   );
 
   const selectedProperty = preview?.property ?? null;
@@ -579,7 +657,7 @@ export default function PropertyMapCanvas() {
             type="fill"
             minzoom={LOT_MIN_ZOOM}
             paint={{
-              "fill-color": ["match", ["get", "kind"], "sold", SOLD, FOR_SALE],
+              "fill-color": ["match", ["get", "kind"], "sold", SOLD, "pending", PENDING, FOR_SALE],
               "fill-opacity": ["case", [">", ["get", "selected"], 0], 0.42, 0.22],
             }}
           />
@@ -588,7 +666,7 @@ export default function PropertyMapCanvas() {
             type="line"
             minzoom={LOT_MIN_ZOOM}
             paint={{
-              "line-color": ["match", ["get", "kind"], "sold", SOLD, FOR_SALE],
+              "line-color": ["match", ["get", "kind"], "sold", SOLD, "pending", PENDING, FOR_SALE],
               "line-width": ["case", [">", ["get", "selected"], 0], 3.2, 2],
             }}
           />
@@ -604,7 +682,7 @@ export default function PropertyMapCanvas() {
               "text-allow-overlap": false,
             }}
             paint={{
-              "text-color": ["match", ["get", "kind"], "sold", SOLD_DARK, FOR_SALE_DARK],
+              "text-color": ["match", ["get", "kind"], "sold", SOLD_DARK, "pending", PENDING_DARK, FOR_SALE_DARK],
               "text-halo-color": "rgba(255,255,255,0.92)",
               "text-halo-width": 1.4,
             }}
@@ -618,7 +696,7 @@ export default function PropertyMapCanvas() {
             minzoom={LOT_MIN_ZOOM}
             paint={{
               "circle-radius": ["case", [">", ["get", "selected"], 0], 9, 7],
-              "circle-color": ["match", ["get", "kind"], "sold", SOLD, FOR_SALE],
+              "circle-color": ["match", ["get", "kind"], "sold", SOLD, "pending", PENDING, FOR_SALE],
               "circle-opacity": 0.85,
               "circle-stroke-color": "#ffffff",
               "circle-stroke-width": 2,
@@ -632,7 +710,10 @@ export default function PropertyMapCanvas() {
           const tone = pinTone(cluster.items);
           const badge = count === 1 ? pinBadge(first) : null;
           const selected =
-            selectedId !== null && cluster.items.some((item) => item.id === selectedId);
+            (selectedId !== null && cluster.items.some((item) => item.id === selectedId)) ||
+            (clusterIds.size > 0 &&
+              cluster.items.length === clusterIds.size &&
+              cluster.items.every((item) => clusterIds.has(item.id)));
 
           return (
             <Marker
@@ -647,13 +728,7 @@ export default function PropertyMapCanvas() {
                   type="button"
                   className={[
                     styles.pin,
-                    tone === "sold"
-                      ? styles.pinSold
-                      : tone === "mixed"
-                        ? styles.pinMixed
-                        : count === 1 && first.pin === "pending"
-                          ? styles.pinPending
-                          : styles.pinSale,
+                    pinClass(tone),
                     count > 1 ? styles.pinCount : "",
                     selected ? styles.pinActive : "",
                   ]
@@ -680,23 +755,41 @@ export default function PropertyMapCanvas() {
       {searchActive && searchEmpty && !searching && !error ? (
         <p className={styles.status}>No matching listings</p>
       ) : null}
-      {zoom < QUIET_MIN_ZOOM && !loading && !error && !selectedId && !searchActive ? (
+      {zoom < QUIET_MIN_ZOOM && !loading && !error && !selectedId && !searchActive && !clusterList ? (
         <p className={styles.hint}>Zoom in to see all listings</p>
       ) : null}
 
-      <MapSearchPanel
-        open={searchOpen}
-        searching={searching}
-        active={searchActive}
-        empty={searchEmpty}
-        resultCount={searchCount}
-        onToggle={() => setSearchOpen((current) => !current)}
-        onClose={() => setSearchOpen(false)}
-        onSearch={handleSearch}
-        onClear={handleClearSearch}
-      />
+      {!clusterList ? (
+        <MapSearchPanel
+          open={searchOpen}
+          searching={searching}
+          active={searchActive}
+          empty={searchEmpty}
+          resultCount={searchCount}
+          onToggle={() => setSearchOpen((current) => !current)}
+          onClose={() => setSearchOpen(false)}
+          onSearch={handleSearch}
+          onClear={handleClearSearch}
+        />
+      ) : null}
 
-      {selectedId ? (
+      {clusterList ? (
+        <MapClusterList
+          items={clusterList.items}
+          details={clusterList.details}
+          loading={clusterList.loading}
+          embed={isMapEmbed()}
+          overlayBottom={embedOverlayBottom()}
+          mapView={{
+            lng: urlView?.lng ?? INITIAL_VIEW.longitude,
+            lat: urlView?.lat ?? INITIAL_VIEW.latitude,
+            zoom,
+          }}
+          onClose={closeClusterList}
+        />
+      ) : null}
+
+      {selectedId && !clusterList ? (
         <article className={styles.card}>
           <button
             type="button"
