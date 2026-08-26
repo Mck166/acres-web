@@ -1,12 +1,14 @@
 import type { MetadataRoute } from "next";
 import { fetchFeed } from "@/lib/api";
-import { getAllPosts } from "@/lib/blog";
+import { getPublishedPosts } from "@/lib/blog";
 import { getPropertyHref, getPropertyId } from "@/lib/properties";
 import { getSiteUrl } from "@/lib/site";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
-  const posts = getAllPosts().map((post) => ({
+  const posts = getPublishedPosts().map((post) => ({
     url: `${siteUrl}/blog/${post.slug}`,
     lastModified: post.date ? new Date(post.date) : new Date(),
     changeFrequency: "monthly" as const,

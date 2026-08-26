@@ -70,3 +70,34 @@
 .content a:hover {
   text-decoration: underline;
 }
+
+.related {
+  margin-top: 48px;
+  padding-top: 28px;
+  border-top: 1px solid var(--acres-border);
+}
+
+.related h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--acres-text);
+}
+
+.related ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.related li {
+  margin-bottom: 10px;
+}
+
+.related a {
+  color: var(--acres-green);
+  font-weight: 600;
+}
+
+.related a:hover {
+  text-decoration: underline;
+}
