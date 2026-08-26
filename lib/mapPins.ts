@@ -42,23 +42,19 @@ export function pinLabel(property: MapProperty): string {
   return property.priceLabel || "New";
 }
 
-/** Status chip for map pins and the cluster list. Pending beats leftover sold. */
+/** Status chip for the cluster list. Pin type wins; status is the fallback. */
 export function listingBadge(
   property: MapProperty,
+  detail?: { Status?: string | null } | null,
 ): { text: string; tone: "sold" | "pending" | "listed" | "price" } | null {
-  const status = String(property.status || "").toLowerCase();
-  if (property.pin === "pending" || status.includes("pending")) {
-    return { text: "Pending", tone: "pending" };
-  }
-  if (property.pin === "sold" || status.includes("sold")) {
-    return { text: "Sold", tone: "sold" };
-  }
-  if (property.pin === "listed") {
-    return { text: "New listing", tone: "listed" };
-  }
-  if (property.pin === "price") {
-    return { text: "New price", tone: "price" };
-  }
+  if (property.pin === "pending") return { text: "Pending", tone: "pending" };
+  if (property.pin === "sold") return { text: "Sold", tone: "sold" };
+  if (property.pin === "listed") return { text: "New listing", tone: "listed" };
+  if (property.pin === "price") return { text: "New price", tone: "price" };
+
+  const status = String(property.status || detail?.Status || "").toLowerCase();
+  if (status.includes("pending")) return { text: "Pending", tone: "pending" };
+  if (status.includes("sold")) return { text: "Sold", tone: "sold" };
   return null;
 }
 

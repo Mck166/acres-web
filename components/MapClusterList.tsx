@@ -53,7 +53,6 @@ export default function MapClusterList({
     el.style.setProperty("height", "auto", "important");
     el.style.setProperty("min-height", "56px", "important");
     el.style.setProperty("visibility", "visible", "important");
-    el.style.setProperty("overflow", "visible", "important");
     el.style.setProperty("pointer-events", "auto", "important");
   }, []);
 
@@ -98,31 +97,29 @@ export default function MapClusterList({
           const beds = property ? getBeds(property) : null;
           const baths = property ? getBaths(property) : null;
           const href = buildPropertyDetailHref(item.id, { from: "map", map: mapView });
-          const badge = listingBadge(item);
-          const badgeClass =
+          const badge = listingBadge(item, property);
+          const statusClass =
             badge?.tone === "sold"
-              ? styles.badgeSold
+              ? styles.clusterStatusSold
               : badge?.tone === "pending"
-                ? styles.badgePending
+                ? styles.clusterStatusPending
                 : badge?.tone === "listed"
-                  ? styles.badgeNew
+                  ? styles.clusterStatusListed
                   : badge?.tone === "price"
-                    ? styles.badgePrice
+                    ? styles.clusterStatusPrice
                     : "";
 
           return (
             <Link key={item.id} href={href} className={styles.clusterRow}>
-              <span className={styles.clusterThumb}>
-                {photo ? (
-                  <PropertyImage className={styles.cardImage} src={photo} alt={address} />
-                ) : (
-                  <div className={styles.cardPlaceholder}>{loading && !property ? "Loading…" : "No photo available"}</div>
-                )}
-                {badge ? (
-                  <span className={`${styles.clusterBadge} ${badgeClass}`}>{badge.text}</span>
-                ) : null}
-              </span>
+              {photo ? (
+                <PropertyImage className={styles.cardImage} src={photo} alt={address} />
+              ) : (
+                <div className={styles.cardPlaceholder}>{loading && !property ? "Loading…" : "No photo available"}</div>
+              )}
               <div className={styles.cardBody}>
+                {badge ? (
+                  <span className={`${styles.clusterStatus} ${statusClass}`}>{badge.text}</span>
+                ) : null}
                 <p className={styles.cardPrice}>{price}</p>
                 <p className={styles.cardAddress}>{address}</p>
                 {beds || baths ? (
