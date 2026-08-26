@@ -58,6 +58,20 @@ export function listingBadge(
   return null;
 }
 
+const CLUSTER_ORDER = { listed: 0, price: 1, pending: 2, sold: 3 } as const;
+
+/** New listing, new price, pending, then sold. */
+export function sortClusterItems(
+  items: MapProperty[],
+  detailsById?: Map<string, { Status?: string | null }>,
+): MapProperty[] {
+  return [...items].sort((left, right) => {
+    const leftTone = listingBadge(left, detailsById?.get(left.id))?.tone;
+    const rightTone = listingBadge(right, detailsById?.get(right.id))?.tone;
+    return (leftTone ? CLUSTER_ORDER[leftTone] : 4) - (rightTone ? CLUSTER_ORDER[rightTone] : 4);
+  });
+}
+
 /** Greedy pixel-distance clustering. Fine at this scale: a few hundred pins at most. */
 export function clusterPins(
   project: ProjectPoint | null,

@@ -275,7 +275,7 @@
 }
 
 .badgeNew {
-  background: #c62828;
+  background: #1f6fd0;
 }
 
 .badgePrice {
@@ -423,9 +423,12 @@
   text-transform: uppercase;
 }
 
-.clusterStatusSold,
-.clusterStatusListed {
+.clusterStatusSold {
   background: #c62828;
+}
+
+.clusterStatusListed {
+  background: #1f6fd0;
 }
 
 .clusterStatusPending {

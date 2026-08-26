@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import type { MapProperty, Property } from "@/lib/api";
 import { buildPropertyDetailHref } from "@/lib/navigationState";
@@ -13,7 +13,7 @@ import {
   getPropertyPhotos,
   getPropertyPrice,
 } from "@/lib/properties";
-import { listingBadge } from "@/lib/mapPins";
+import { listingBadge, sortClusterItems } from "@/lib/mapPins";
 import styles from "@/components/PropertyMap.module.css";
 
 type MapView = {
@@ -41,8 +41,12 @@ export default function MapClusterList({
   mapView,
   onClose,
 }: MapClusterListProps) {
-  const byId = new Map(details.map((property) => [String(property._id), property]));
+  const byId = useMemo(
+    () => new Map(details.map((property) => [String(property._id), property])),
+    [details],
+  );
   const chromeRef = useRef<HTMLDivElement>(null);
+  const orderedItems = useMemo(() => sortClusterItems(items, byId), [items, byId]);
 
   const countLabel = `${items.length} ${items.length === 1 ? "property" : "properties"}`;
 
@@ -88,7 +92,7 @@ export default function MapClusterList({
           </button>
         </div>
         <div className={styles.clusterListBody}>
-        {items.map((item) => {
+        {orderedItems.map((item) => {
           const property = byId.get(item.id) ?? null;
           const photos = property ? getPropertyPhotos(property) : [];
           const photo = photos[0];
