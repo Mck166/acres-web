@@ -2,9 +2,47 @@ import type { MetadataRoute } from "next";
 import { fetchFeed } from "@/lib/api";
 import { getPublishedPosts } from "@/lib/blog";
 import { getPropertyHref, getPropertyId } from "@/lib/properties";
+import { getPropertyLastModified } from "@/lib/propertySeo";
 import { getSiteUrl } from "@/lib/site";
 
 export const revalidate = 3600;
+
+const SITEMAP_PAGE_SIZE = 100;
+const SITEMAP_MAX_PAGES = 40;
+
+async function collectPropertyEntries(siteUrl: string): Promise<MetadataRoute.Sitemap> {
+  const entries: MetadataRoute.Sitemap = [];
+  const seen = new Set<string>();
+  let cursor: string | null = null;
+  let hasMore = true;
+  let pages = 0;
+
+  while (hasMore && pages < SITEMAP_MAX_PAGES) {
+    const feed = await fetchFeed({
+      limit: SITEMAP_PAGE_SIZE,
+      cursor,
+      revalidate: 3600,
+    });
+
+    for (const property of feed.properties) {
+      const id = getPropertyId(property);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      entries.push({
+        url: `${siteUrl}${getPropertyHref(id)}`,
+        lastModified: getPropertyLastModified(property),
+        changeFrequency: "daily",
+        priority: 0.8,
+      });
+    }
+
+    cursor = feed.nextCursor;
+    hasMore = Boolean(feed.hasMore && cursor);
+    pages += 1;
+  }
+
+  return entries;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
@@ -17,16 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let propertyEntries: MetadataRoute.Sitemap = [];
   try {
-    const feed = await fetchFeed({ limit: 100, revalidate: 3600 });
-    propertyEntries = feed.properties
-      .map((property) => getPropertyId(property))
-      .filter(Boolean)
-      .map((id) => ({
-        url: `${siteUrl}${getPropertyHref(id)}`,
-        lastModified: new Date(),
-        changeFrequency: "daily" as const,
-        priority: 0.8,
-      }));
+    propertyEntries = await collectPropertyEntries(siteUrl);
   } catch (error) {
     console.error("Could not add properties to sitemap:", error);
   }

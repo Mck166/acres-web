@@ -15,6 +15,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
 export type Property = {
   _id: string;
   Price?: string;
+  price_value?: number;
   Status?: string;
   Address?: string;
   address?: string;
@@ -25,6 +26,11 @@ export type Property = {
   url?: string;
   Description?: string;
   description?: string;
+  latitude?: number | string;
+  longitude?: number | string;
+  date_added?: string;
+  date_updated?: string;
+  listed_on?: string;
   BEDS?: string | number;
   Beds?: string | number;
   beds?: string | number;

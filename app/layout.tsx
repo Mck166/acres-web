@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Providers } from "@/components/Providers";
 import Header from "@/components/Header";
+import IosAppBanner from "@/components/IosAppBanner";
 import SiteFooter from "@/components/SiteFooter";
 import { SITE_DESCRIPTION, SITE_NAME, getSiteUrl } from "@/lib/site";
 import "./globals.css";
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Header />
           <main id="main">{children}</main>
           <SiteFooter />
+          <IosAppBanner />
         </Providers>
       </body>
     </html>

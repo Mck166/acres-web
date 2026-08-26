@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { fetchPropertyById } from "@/lib/api";
+import { fetchFeed, fetchPropertyById } from "@/lib/api";
 import PropertyBackLink from "@/components/PropertyBackLink";
 import PropertyFavoriteButton from "@/components/PropertyFavoriteButton";
 import PropertyShareButton from "@/components/PropertyShareButton";
@@ -23,8 +24,19 @@ import {
   getPropertyPhotos,
   getPropertyPrice,
   getPropertyShareUrl,
-  truncateDescription,
 } from "@/lib/properties";
+import {
+  getListingPhrase,
+  getPropertyJsonLd,
+  getPropertyLastModified,
+  getPropertySeoDescription,
+  getPropertySeoTitle,
+  getPropertySummary,
+  getPropertyTypeLabel,
+  getRelatedPropertyGuides,
+  parseCivicAddress,
+  stringifyJsonLd,
+} from "@/lib/propertySeo";
 import styles from "./page.module.css";
 
 type PropertyPageProps = {
@@ -32,39 +44,76 @@ type PropertyPageProps = {
 };
 
 export const revalidate = 60;
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  try {
+    const feed = await fetchFeed({ limit: 100, revalidate: 3600 });
+    return feed.properties
+      .map((property) => getPropertyId(property))
+      .filter(Boolean)
+      .map((id) => ({ id }));
+  } catch (error) {
+    console.error("Could not pre-render property pages:", error);
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { id } = await params;
   const property = await fetchPropertyById(decodeURIComponent(id));
   if (!property) {
-    return { title: "Property not found" };
+    return {
+      title: "Property not found",
+      robots: { index: false, follow: false },
+    };
   }
 
   const address = getPropertyAddress(property);
-  const price = getPropertyPrice(property);
   const photos = getPropertyPhotos(property);
-  const listingDescription = getPropertyDescription(property);
-  const description = listingDescription
-    ? truncateDescription(listingDescription)
-    : `${address} listed at ${price} on ${SITE_NAME}.`;
+  const title = getPropertySeoTitle(property);
+  const description = getPropertySeoDescription(property);
   const href = getPropertyHref(property);
+  const canonical = getPropertyShareUrl(property);
+  const modified = getPropertyLastModified(property);
+  const listedTime = property.listed_on ? new Date(String(property.listed_on)) : null;
+  const publishedTime =
+    listedTime && !Number.isNaN(listedTime.getTime()) ? listedTime.toISOString() : undefined;
+  const ogImages = photos[0]
+    ? [{ url: photos[0], alt: `${address} in Nova Scotia` }]
+    : undefined;
 
   return {
-    title: address,
+    title,
     description,
     alternates: {
       canonical: href,
     },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
     openGraph: {
       type: "article",
-      title: `${address} | ${SITE_NAME}`,
+      locale: "en_CA",
+      title: `${title} | ${SITE_NAME}`,
       description,
-      url: href,
-      images: photos[0] ? [{ url: photos[0], alt: address }] : undefined,
+      url: canonical,
+      siteName: SITE_NAME,
+      images: ogImages,
+      publishedTime,
+      modifiedTime: modified.toISOString(),
     },
     twitter: {
       card: "summary_large_image",
-      title: `${address} | ${SITE_NAME}`,
+      title: `${title} | ${SITE_NAME}`,
       description,
       images: photos[0] ? [photos[0]] : undefined,
     },
@@ -78,16 +127,21 @@ function DetailSection({
   title: string;
   rows: { label: string; value: unknown; suffix?: string }[];
 }) {
+  const visible = rows.filter((row) => formatDetailValue(row.value) !== "Not specified");
+  if (visible.length === 0) {
+    return null;
+  }
+
   return (
     <section className={styles.section}>
       <h2>{title}</h2>
       <dl className={styles.rows}>
-        {rows.map((row) => (
+        {visible.map((row) => (
           <div className={styles.row} key={row.label}>
             <dt>{row.label}</dt>
             <dd>
               {formatDetailValue(row.value)}
-              {row.suffix && formatDetailValue(row.value) !== "Not specified" ? row.suffix : ""}
+              {row.suffix ? row.suffix : ""}
             </dd>
           </div>
         ))}
@@ -102,6 +156,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   if (!property) notFound();
 
   const address = getPropertyAddress(property);
+  const parsedAddress = parseCivicAddress(address);
   const price = getPropertyPrice(property);
   const photos = getPropertyPhotos(property);
   const beds = getBeds(property);
@@ -112,29 +167,69 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const priceChangedAt = formatEventDate(property.price_changed_on);
   const pendingAt = formatEventDate(property.pending_on);
   const soldAt = formatEventDate(property.sold_on);
+  const listedBy = field(property, "LISTED BY");
+  const status = field(property, "Status", "STATUS");
+  const propertyType = getPropertyTypeLabel(property);
+  const listingPhrase = getListingPhrase(property);
 
   const propertyId = getPropertyId(property);
   const shareUrl = getPropertyShareUrl(property);
   const shareText = `${address} listed at ${price} on ${SITE_NAME}.`;
   const listingDescription = getPropertyDescription(property);
+  const summary = getPropertySummary(property);
+  const relatedGuides = getRelatedPropertyGuides(property);
+  const galleryAlt = parsedAddress.city
+    ? `${address} ${listingPhrase} in ${parsedAddress.city}, Nova Scotia`
+    : `${address} ${listingPhrase} in Nova Scotia`;
+
+  const extraRows = [
+    listedBy ? { label: "Listed By", value: String(listedBy) } : null,
+    status ? { label: "Status", value: String(status) } : null,
+    listedAt ? { label: "Listed", value: listedAt } : null,
+    priceChangedAt ? { label: "Price changed", value: priceChangedAt } : null,
+    pendingAt ? { label: "Pending", value: pendingAt } : null,
+    soldAt ? { label: "Sold", value: soldAt } : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row));
 
   return (
     <article className={styles.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(getPropertyJsonLd(property)) }}
+      />
+
+      <nav className={styles.crumbs} aria-label="Breadcrumb">
+        <ol>
+          <li>
+            <Link href="/">Home</Link>
+          </li>
+          <li>
+            <Link href="/properties">Properties</Link>
+          </li>
+          <li aria-current="page">{address}</li>
+        </ol>
+      </nav>
+
       <Suspense fallback={<span className={styles.back}>Back to listings</span>}>
         <PropertyBackLink propertyId={propertyId} />
       </Suspense>
 
       <div className={styles.layout}>
-        <PropertyGallery photos={photos} alt={address} />
+        <PropertyGallery photos={photos} alt={galleryAlt} />
 
         <header className={styles.header}>
           <div>
-            <h1>{price}</h1>
-            <p className={styles.address}>{address}</p>
+            <h1>{address}</h1>
+            <p className={styles.price}>{price}</p>
+            <p className={styles.listingMeta}>
+              {listingPhrase.charAt(0).toUpperCase() + listingPhrase.slice(1)}
+              {parsedAddress.city ? ` in ${parsedAddress.city}, Nova Scotia` : " in Nova Scotia"}
+            </p>
             <div className={styles.badges}>
               {beds ? <span className={styles.badge}>{formatBedLabel(beds)}</span> : null}
               {baths ? <span className={styles.badge}>{formatBathLabel(baths)}</span> : null}
               {livingArea ? <span className={styles.badge}>{livingArea}</span> : null}
+              {propertyType ? <span className={styles.badge}>{propertyType}</span> : null}
             </div>
           </div>
           <div className={styles.headerActions}>
@@ -143,10 +238,12 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           </div>
         </header>
 
+        <p className={styles.summary}>{summary}</p>
+
         <div className={styles.sections}>
           {listingDescription ? (
             <section className={styles.section}>
-              <h2>Description</h2>
+              <h2>About {address}</h2>
               <p className={styles.description}>{listingDescription}</p>
             </section>
           ) : null}
@@ -154,6 +251,9 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           <DetailSection
             title="Property Details"
             rows={[
+              { label: "Address", value: address },
+              { label: "City", value: parsedAddress.city },
+              { label: "Province", value: "Nova Scotia" },
               { label: "Property ID", value: field(property, "PID") },
               { label: "Type", value: field(property, "TYPE") },
               { label: "Building Style", value: field(property, "BUILDING STYLE") },
@@ -207,58 +307,51 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             ]}
           />
 
-          <section className={styles.section}>
-            <h2>Additional Information</h2>
-            <dl className={styles.rows}>
-              <div className={styles.row}>
-                <dt>Listed By</dt>
-                <dd>{formatDetailValue(field(property, "LISTED BY"))}</dd>
-              </div>
-              <div className={styles.row}>
-                <dt>Status</dt>
-                <dd>{formatDetailValue(field(property, "Status", "STATUS"))}</dd>
-              </div>
-              {listedAt ? (
-                <div className={styles.row}>
-                  <dt>Listed</dt>
-                  <dd>{listedAt}</dd>
-                </div>
-              ) : null}
-              {priceChangedAt ? (
-                <div className={styles.row}>
-                  <dt>Price changed</dt>
-                  <dd>{priceChangedAt}</dd>
-                </div>
-              ) : null}
-              {pendingAt ? (
-                <div className={styles.row}>
-                  <dt>Pending</dt>
-                  <dd>{pendingAt}</dd>
-                </div>
-              ) : null}
-              {soldAt ? (
-                <div className={styles.row}>
-                  <dt>Sold</dt>
-                  <dd>{soldAt}</dd>
-                </div>
-              ) : null}
-              {listingUrl ? (
-                <div className={styles.row}>
-                  <dt>Original listing</dt>
-                  <dd>
-                    <a
-                      className={styles.external}
-                      href={String(listingUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View source listing
-                    </a>
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          </section>
+          {extraRows.length > 0 || listingUrl ? (
+            <section className={styles.section}>
+              <h2>Additional Information</h2>
+              <dl className={styles.rows}>
+                {extraRows.map((row) => (
+                  <div className={styles.row} key={row.label}>
+                    <dt>{row.label}</dt>
+                    <dd>{row.value}</dd>
+                  </div>
+                ))}
+                {listingUrl ? (
+                  <div className={styles.row}>
+                    <dt>Original listing</dt>
+                    <dd>
+                      <a
+                        className={styles.external}
+                        href={String(listingUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                      >
+                        View source listing
+                      </a>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+          ) : null}
+
+          {relatedGuides.length > 0 ? (
+            <nav className={styles.related} aria-labelledby="related-guides-heading">
+              <h2 id="related-guides-heading">
+                {parsedAddress.city
+                  ? `Buying in ${parsedAddress.city}`
+                  : "Buying in Nova Scotia"}
+              </h2>
+              <ul>
+                {relatedGuides.map((guide) => (
+                  <li key={guide.href}>
+                    <Link href={guide.href}>{guide.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
         </div>
       </div>
     </article>

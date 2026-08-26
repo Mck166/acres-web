@@ -100,3 +100,12 @@ body[data-map-page] main#main {
 body[data-map-page] [data-site-footer] {
   display: none;
 }
+
+body[data-ios-app-banner] {
+  --acres-ios-banner-space: calc(84px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--acres-ios-banner-space);
+}
+
+body[data-map-page][data-ios-app-banner] {
+  padding-bottom: 0;
+}
