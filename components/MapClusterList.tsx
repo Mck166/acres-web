@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import type { MapProperty, Property } from "@/lib/api";
 import { buildPropertyDetailHref } from "@/lib/navigationState";
@@ -41,8 +42,20 @@ export default function MapClusterList({
   onClose,
 }: MapClusterListProps) {
   const byId = new Map(details.map((property) => [String(property._id), property]));
+  const chromeRef = useRef<HTMLDivElement>(null);
 
   const countLabel = `${items.length} ${items.length === 1 ? "property" : "properties"}`;
+
+  useLayoutEffect(() => {
+    const el = chromeRef.current;
+    if (!el) return;
+    el.style.setProperty("display", "flex", "important");
+    el.style.setProperty("height", "auto", "important");
+    el.style.setProperty("min-height", "56px", "important");
+    el.style.setProperty("visibility", "visible", "important");
+    el.style.setProperty("overflow", "visible", "important");
+    el.style.setProperty("pointer-events", "auto", "important");
+  }, []);
 
   return (
     <>
@@ -58,8 +71,13 @@ export default function MapClusterList({
         className={`${styles.clusterList} ${embed ? styles.clusterListEmbed : ""}`}
         style={embed ? { bottom: overlayBottom } : undefined}
         aria-label={countLabel}
+        data-acres-cluster-list=""
       >
-        <div className={styles.clusterListHeader}>
+        <div
+          ref={chromeRef}
+          className={styles.clusterListHeader}
+          data-acres-cluster-chrome=""
+        >
           <p className={styles.clusterListTitle}>{countLabel}</p>
           <button
             type="button"

@@ -330,14 +330,27 @@
   border-radius: 22px;
 }
 
+.clusterListEmbed .clusterListHeader {
+  padding-top: 16px;
+}
+
 .clusterListHeader {
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 14px 14px 12px 18px;
   flex-shrink: 0;
+  min-height: 56px;
+  height: auto !important;
+  visibility: visible !important;
+  overflow: visible !important;
+  pointer-events: auto !important;
+  position: sticky;
+  top: 0;
+  z-index: 2;
   border-bottom: 1px solid rgba(18, 19, 15, 0.08);
+  background: #fff;
 }
 
 .clusterListTitle {
@@ -368,6 +381,7 @@
 .clusterListBody {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 8px;
   min-height: 0;
   overflow: auto;
