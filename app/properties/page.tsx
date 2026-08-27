@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { fetchFeed, type Property } from "@/lib/api";
 import PropertyGrid from "@/components/PropertyGrid";
 import styles from "./page.module.css";
@@ -33,14 +32,12 @@ export default async function PropertiesPage() {
         <h1>Properties</h1>
         <p>Browse current listings, save the ones you like, and open any home for full details.</p>
       </section>
-      <Suspense fallback={null}>
-        <PropertyGrid
-          initialProperties={properties}
-          initialCursor={nextCursor}
-          initialHasMore={hasMore}
-          initialError={error}
-        />
-      </Suspense>
+      <PropertyGrid
+        initialProperties={properties}
+        initialCursor={nextCursor}
+        initialHasMore={hasMore}
+        initialError={error}
+      />
     </div>
   );
 }

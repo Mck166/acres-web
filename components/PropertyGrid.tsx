@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   favoriteProperty,
@@ -22,6 +22,7 @@ import {
   readPropertiesListState,
   savePropertiesListState,
   shouldRestorePropertiesList,
+  type PropertiesListState,
 } from "@/lib/navigationState";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
@@ -35,22 +36,14 @@ type PropertyGridProps = {
   initialError?: string | null;
 };
 
-export default function PropertyGrid({
-  initialProperties,
-  initialCursor,
-  initialHasMore,
-  initialError = null,
-}: PropertyGridProps) {
+function PropertyListRestore({
+  onRestore,
+}: {
+  onRestore: (saved: PropertiesListState) => void;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const restoredRef = useRef(false);
-  const { user } = useAuth();
-  const [properties, setProperties] = useState(initialProperties);
-  const [cursor, setCursor] = useState(initialCursor);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(initialError);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (restoredRef.current) return;
@@ -65,9 +58,7 @@ export default function PropertyGrid({
     if (!saved) return;
 
     clearPropertiesListState();
-    setProperties(saved.properties);
-    setCursor(saved.cursor);
-    setHasMore(saved.hasMore);
+    onRestore(saved);
 
     if (searchParams.get("restore") === "1") {
       router.replace("/properties", { scroll: false });
@@ -76,7 +67,30 @@ export default function PropertyGrid({
     requestAnimationFrame(() => {
       window.scrollTo(0, saved.scrollY);
     });
-  }, [router, searchParams]);
+  }, [onRestore, router, searchParams]);
+
+  return null;
+}
+
+export default function PropertyGrid({
+  initialProperties,
+  initialCursor,
+  initialHasMore,
+  initialError = null,
+}: PropertyGridProps) {
+  const { user } = useAuth();
+  const [properties, setProperties] = useState(initialProperties);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(initialError);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  const handleRestore = useCallback((saved: PropertiesListState) => {
+    setProperties(saved.properties);
+    setCursor(saved.cursor);
+    setHasMore(saved.hasMore);
+  }, []);
 
   const prepareReturnToList = useCallback(() => {
     savePropertiesListState({
@@ -165,9 +179,16 @@ export default function PropertyGrid({
     }
   }, [cursor, hasMore, loadingMore, user]);
 
+  const restore = (
+    <Suspense fallback={null}>
+      <PropertyListRestore onRestore={handleRestore} />
+    </Suspense>
+  );
+
   if (properties.length === 0 && !loadingMore) {
     return (
       <div className={styles.status}>
+        {restore}
         <p>{error || "No properties are available right now."}</p>
         {error ? (
           <GlassButton title="Try again" onClick={loadMore} />
@@ -178,6 +199,7 @@ export default function PropertyGrid({
 
   return (
     <section className={styles.section} aria-label="Property listings">
+      {restore}
       <div className={styles.grid}>
         {properties.map((property) => {
           const id = getPropertyId(property);

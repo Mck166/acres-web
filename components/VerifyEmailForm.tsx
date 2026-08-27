@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
-import { pathAfterSignIn, safeNextPath } from "@/lib/completeAuth";
+import { onboardingPath, pathAfterSignIn } from "@/lib/completeAuth";
 import {
   messageForVerificationError,
   needsEmailVerification,
@@ -18,7 +18,7 @@ export default function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, refreshUser, logout } = useAuth();
-  const nextPath = searchParams.get("next") || "/properties";
+  const nextPath = searchParams.get("next") || "/onboarding";
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function VerifyEmailForm() {
 
   const continueIfVerified = useCallback(async () => {
     const current = getFirebaseAuth().currentUser;
-    if (needsEmailVerification(current)) return false;
+    if (!current || needsEmailVerification(current)) return false;
     router.replace(await pathAfterSignIn(nextPath));
     return true;
   }, [nextPath, router]);
@@ -83,7 +83,7 @@ export default function VerifyEmailForm() {
 
   const handleLogout = async () => {
     await logout();
-    router.replace(`/login?next=${encodeURIComponent(safeNextPath(nextPath))}`);
+    router.replace(`/login?next=${encodeURIComponent(onboardingPath(nextPath))}`);
   };
 
   if (authLoading) {
@@ -103,7 +103,7 @@ export default function VerifyEmailForm() {
             If you just clicked the link we sent, your email is confirmed. Log in to continue.
           </p>
           <p className={styles.switch}>
-            <Link href={`/login?next=${encodeURIComponent(safeNextPath(nextPath))}`}>Login</Link>
+            <Link href={`/login?next=${encodeURIComponent(onboardingPath(nextPath))}`}>Login</Link>
           </p>
         </div>
       </div>

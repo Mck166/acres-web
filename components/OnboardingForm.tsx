@@ -8,7 +8,7 @@ import { getUserData, saveUserOnboarding } from "@/lib/firestore";
 import { requestWelcomeEmail } from "@/lib/api";
 import { splitDisplayName } from "@/lib/appleAuth";
 import { needsEmailVerification } from "@/lib/emailVerification";
-import { verifyEmailPath } from "@/lib/completeAuth";
+import { destinationAfterOnboarding, verifyEmailPath } from "@/lib/completeAuth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import styles from "@/app/onboarding/page.module.css";
 
@@ -83,8 +83,7 @@ export default function OnboardingForm() {
       .then((profile) => {
         if (cancelled) return;
         if (profile?.firstName) {
-          const dest = nextPath.startsWith("/") ? nextPath : "/";
-          router.replace(dest);
+          router.replace(destinationAfterOnboarding(nextPath));
           return;
         }
         setChecking(false);
@@ -134,7 +133,7 @@ export default function OnboardingForm() {
         browsingStatus: answers.browsingStatus,
       });
       void requestWelcomeEmail();
-      router.push(nextPath.startsWith("/") ? nextPath : "/");
+      router.push(destinationAfterOnboarding(nextPath));
     } catch (saveError) {
       console.error("Error saving onboarding:", saveError);
       setError("We could not save your details. Please try again.");
@@ -171,7 +170,7 @@ export default function OnboardingForm() {
     return (
       <div className={styles.page}>
         <p className={styles.status}>
-          <Link href="/signup">Sign up</Link> to create your Acres account.
+          <Link href={`/login?next=${encodeURIComponent("/onboarding")}`}>Log in</Link> to finish setting up your account.
         </p>
       </div>
     );

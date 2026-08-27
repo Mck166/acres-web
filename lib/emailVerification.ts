@@ -14,9 +14,9 @@ export function needsEmailVerification(user: User | null | undefined) {
 
 function continueUrl() {
   if (typeof window !== "undefined") {
-    return `${window.location.origin}/verify-email`;
+    return `${window.location.origin}/onboarding`;
   }
-  return `${getSiteUrl()}/verify-email`;
+  return `${getSiteUrl()}/onboarding`;
 }
 
 function loginContinueUrl() {
