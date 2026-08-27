@@ -25,6 +25,13 @@ export async function sendVerificationEmail(user: User) {
   });
 }
 
+// reload() updates user.emailVerified, but Firestore still uses the ID token
+// until it is force-refreshed. Without this, verified users fail writes.
+export async function refreshAuthClaims(user: User) {
+  await user.reload();
+  await user.getIdToken(true);
+}
+
 export function messageForVerificationError(error: unknown) {
   const code = error instanceof FirebaseError ? error.code : "";
   switch (code) {

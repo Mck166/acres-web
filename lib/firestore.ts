@@ -8,7 +8,8 @@ import {
   getDocs,
   setDoc,
 } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
+import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
+import { refreshAuthClaims } from "@/lib/emailVerification";
 
 export type UserProfile = {
   firstName?: string;
@@ -37,6 +38,11 @@ export async function getUserData(userId: string): Promise<UserProfile | null> {
 }
 
 export async function saveUserOnboarding(userId: string, onboardingData: OnboardingData) {
+  const currentUser = getFirebaseAuth().currentUser;
+  if (currentUser) {
+    await refreshAuthClaims(currentUser);
+  }
+
   const db = getFirebaseDb();
   const userRef = doc(db, "users", userId);
   const now = new Date().toISOString();

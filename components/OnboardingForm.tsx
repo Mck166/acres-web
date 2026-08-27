@@ -8,6 +8,7 @@ import { getUserData, saveUserOnboarding } from "@/lib/firestore";
 import { splitDisplayName } from "@/lib/appleAuth";
 import { needsEmailVerification } from "@/lib/emailVerification";
 import { verifyEmailPath } from "@/lib/completeAuth";
+import { getFirebaseAuth } from "@/lib/firebase";
 import styles from "@/app/onboarding/page.module.css";
 
 const QUESTIONS = [
@@ -48,7 +49,7 @@ type Answers = {
 export default function OnboardingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const [checking, setChecking] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -119,7 +120,13 @@ export default function OnboardingForm() {
     setLoading(true);
     setError(null);
     try {
-      await saveUserOnboarding(user.uid, {
+      await refreshUser();
+      const current = getFirebaseAuth().currentUser;
+      if (!current || needsEmailVerification(current)) {
+        router.replace(verifyEmailPath(nextPath));
+        return;
+      }
+      await saveUserOnboarding(current.uid, {
         firstName: resolvedAnswers.firstName.trim(),
         lastName: resolvedAnswers.lastName.trim(),
         isFirstTimeHomebuyer: answers.isFirstTimeHomebuyer,

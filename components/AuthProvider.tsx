@@ -26,6 +26,7 @@ import {
 } from "@/lib/appleAuth";
 import {
   needsEmailVerification,
+  refreshAuthClaims,
   sendVerificationEmail,
 } from "@/lib/emailVerification";
 
@@ -99,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       syncUser(null);
       return;
     }
-    await current.reload();
+    await refreshAuthClaims(current);
     syncUser(getFirebaseAuth().currentUser);
   }, [syncUser]);
 
