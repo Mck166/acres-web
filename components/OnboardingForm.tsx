@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { getUserData, saveUserOnboarding } from "@/lib/firestore";
+import { splitDisplayName } from "@/lib/appleAuth";
 import styles from "@/app/onboarding/page.module.css";
 
 const QUESTIONS = [
@@ -59,6 +60,12 @@ export default function OnboardingForm() {
 
   const nextPath = searchParams.get("next") || "/properties";
   const currentQuestion = QUESTIONS[currentStep];
+  const appleNames = splitDisplayName(user?.displayName);
+  const resolvedAnswers: Answers = {
+    ...answers,
+    firstName: answers.firstName || appleNames.firstName,
+    lastName: answers.lastName || appleNames.lastName,
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -85,16 +92,16 @@ export default function OnboardingForm() {
   }, [nextPath, router, user]);
 
   const canProceed = useMemo(() => {
-    const value = answers[currentQuestion.id as keyof Answers];
+    const value = resolvedAnswers[currentQuestion.id as keyof Answers];
     if (currentQuestion.type === "text") {
       return typeof value === "string" && value.trim().length > 0;
     }
     return value !== null && value !== undefined;
-  }, [answers, currentQuestion]);
+  }, [currentQuestion, resolvedAnswers]);
 
   const handleComplete = async () => {
     if (loading || !user) return;
-    if (!answers.firstName.trim() || !answers.lastName.trim()) {
+    if (!resolvedAnswers.firstName.trim() || !resolvedAnswers.lastName.trim()) {
       setError("Please enter your first and last name.");
       return;
     }
@@ -107,8 +114,8 @@ export default function OnboardingForm() {
     setError(null);
     try {
       await saveUserOnboarding(user.uid, {
-        firstName: answers.firstName.trim(),
-        lastName: answers.lastName.trim(),
+        firstName: resolvedAnswers.firstName.trim(),
+        lastName: resolvedAnswers.lastName.trim(),
         isFirstTimeHomebuyer: answers.isFirstTimeHomebuyer,
         browsingStatus: answers.browsingStatus,
       });
@@ -164,7 +171,7 @@ export default function OnboardingForm() {
   }
 
   const isLastStep = currentStep === QUESTIONS.length - 1;
-  const value = answers[currentQuestion.id as keyof Answers];
+  const value = resolvedAnswers[currentQuestion.id as keyof Answers];
 
   return (
     <div className={styles.page}>

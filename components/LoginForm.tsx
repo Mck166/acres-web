@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/components/AuthProvider";
-import { getUserData } from "@/lib/firestore";
-import { getFirebaseAuth } from "@/lib/firebase";
+import AppleSignInButton from "@/components/AppleSignInButton";
 import GlassButton from "@/components/GlassButton";
+import { isAuthCancelled } from "@/lib/appleAuth";
+import { pathAfterSignIn } from "@/lib/completeAuth";
 import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
@@ -25,6 +26,10 @@ function messageForError(error: unknown) {
       return "Too many attempts. Try again in a few minutes.";
     case "auth/network-request-failed":
       return "No connection. Check your network and try again.";
+    case "auth/account-exists-with-different-credential":
+      return "An account already exists with this email. Log in with email and password instead.";
+    case "auth/popup-blocked":
+      return "Your browser blocked the Apple sign-in window. Allow popups and try again.";
     default:
       return error instanceof Error ? error.message : "Something went wrong. Please try again.";
   }
@@ -33,13 +38,34 @@ function messageForError(error: unknown) {
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, signInWithApple, pendingOAuth, clearPendingOAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
+  const oauthHandled = useRef(false);
 
   const nextPath = searchParams.get("next") || "/";
+
+  const finishAppleAuth = useCallback(async (isNewUser: boolean) => {
+    logEvent(isNewUser ? "sign_up" : "login", { method: "apple" });
+    router.push(await pathAfterSignIn(nextPath));
+  }, [nextPath, router]);
+
+  useEffect(() => {
+    if (!pendingOAuth || oauthHandled.current) return;
+    oauthHandled.current = true;
+    setLoading(true);
+    finishAppleAuth(pendingOAuth.isNewUser)
+      .catch((error) => {
+        oauthHandled.current = false;
+        setErrors({ form: messageForError(error) });
+      })
+      .finally(() => {
+        clearPendingOAuth();
+        setLoading(false);
+      });
+  }, [clearPendingOAuth, finishAppleAuth, pendingOAuth]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -60,18 +86,26 @@ export default function LoginForm() {
     try {
       await login(trimmedEmail, password);
       logEvent("login", { method: "password" });
-      const dest = nextPath.startsWith("/") ? nextPath : "/";
-      const uid = getFirebaseAuth().currentUser?.uid;
-      if (uid) {
-        const profile = await getUserData(uid);
-        if (!profile) {
-          router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
-          return;
-        }
-      }
-      router.push(dest);
+      router.push(await pathAfterSignIn(nextPath));
     } catch (error) {
       setErrors({ form: messageForError(error) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApple = async () => {
+    if (loading) return;
+    setErrors({});
+    setLoading(true);
+    try {
+      const result = await signInWithApple();
+      if (result.redirected) return;
+      await finishAppleAuth(result.isNewUser);
+    } catch (error) {
+      if (!isAuthCancelled(error)) {
+        setErrors({ form: messageForError(error) });
+      }
     } finally {
       setLoading(false);
     }
@@ -82,6 +116,14 @@ export default function LoginForm() {
       <div className={styles.card}>
         <h1 className={styles.title}>Login</h1>
         <p className={styles.subtitle}>Sign in to your account</p>
+        <AppleSignInButton
+          onClick={handleApple}
+          loading={loading}
+          className={styles.appleButton}
+        />
+        <div className={styles.divider} role="separator">
+          or
+        </div>
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           <label className={styles.label} htmlFor="email">
             Email

@@ -19,12 +19,24 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import {
+  completeAppleRedirect,
+  signInWithApple as startAppleSignIn,
+  type AppleSignInResult,
+} from "@/lib/appleAuth";
+
+type PendingOAuth = {
+  isNewUser: boolean;
+};
 
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
+  pendingOAuth: PendingOAuth | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
+  signInWithApple: () => Promise<AppleSignInResult>;
+  clearPendingOAuth: () => void;
   logout: () => Promise<void>;
 };
 
@@ -41,6 +53,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingOAuth, setPendingOAuth] = useState<PendingOAuth | null>(null);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -55,6 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(nextUser);
           setLoading(false);
         });
+        completeAppleRedirect()
+          .then((result) => {
+            if (!result) return;
+            setPendingOAuth({ isNewUser: result.isNewUser });
+          })
+          .catch((error) => {
+            console.error("Apple redirect error:", error);
+          });
       });
 
     return () => unsubscribe();
@@ -68,13 +89,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
   }, []);
 
+  const signInWithApple = useCallback(async () => {
+    return startAppleSignIn();
+  }, []);
+
+  const clearPendingOAuth = useCallback(() => {
+    setPendingOAuth(null);
+  }, []);
+
   const logout = useCallback(async () => {
     await signOut(getFirebaseAuth());
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, signup, logout }),
-    [user, loading, login, signup, logout],
+    () => ({
+      user,
+      loading,
+      pendingOAuth,
+      login,
+      signup,
+      signInWithApple,
+      clearPendingOAuth,
+      logout,
+    }),
+    [
+      user,
+      loading,
+      pendingOAuth,
+      login,
+      signup,
+      signInWithApple,
+      clearPendingOAuth,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

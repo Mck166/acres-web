@@ -86,6 +86,52 @@
   margin-bottom: 20px;
 }
 
+.appleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  margin: 0 0 8px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 20px;
+  background: #000;
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+}
+
+.appleButton:hover:not(:disabled) {
+  background: #1a1a1a;
+}
+
+.appleButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 20px;
+  color: var(--acres-brown);
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--acres-border);
+}
+
 .switch {
   margin-top: 20px;
   text-align: center;

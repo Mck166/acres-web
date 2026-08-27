@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/components/AuthProvider";
+import AppleSignInButton from "@/components/AppleSignInButton";
 import GlassButton from "@/components/GlassButton";
+import { isAuthCancelled } from "@/lib/appleAuth";
+import { pathAfterSignIn, safeNextPath } from "@/lib/completeAuth";
 import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
@@ -25,6 +28,10 @@ function messageForError(error: unknown) {
     case "auth/config":
     case "auth/config-not-found":
       return "Authentication is not configured correctly. Please try again later.";
+    case "auth/account-exists-with-different-credential":
+      return "An account already exists with this email. Log in with email and password instead.";
+    case "auth/popup-blocked":
+      return "Your browser blocked the Apple sign-in window. Allow popups and try again.";
     default:
       return error instanceof Error ? error.message : "Something went wrong. Please try again.";
   }
@@ -33,7 +40,7 @@ function messageForError(error: unknown) {
 export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signup } = useAuth();
+  const { signup, signInWithApple, pendingOAuth, clearPendingOAuth } = useAuth();
   const nextPath = searchParams.get("next") || "/properties";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,6 +52,27 @@ export default function SignupForm() {
     confirmPassword?: string;
     form?: string;
   }>({});
+  const oauthHandled = useRef(false);
+
+  const finishAppleAuth = useCallback(async (isNewUser: boolean) => {
+    logEvent(isNewUser ? "sign_up" : "login", { method: "apple" });
+    router.push(await pathAfterSignIn(nextPath));
+  }, [nextPath, router]);
+
+  useEffect(() => {
+    if (!pendingOAuth || oauthHandled.current) return;
+    oauthHandled.current = true;
+    setLoading(true);
+    finishAppleAuth(pendingOAuth.isNewUser)
+      .catch((error) => {
+        oauthHandled.current = false;
+        setErrors({ form: messageForError(error) });
+      })
+      .finally(() => {
+        clearPendingOAuth();
+        setLoading(false);
+      });
+  }, [clearPendingOAuth, finishAppleAuth, pendingOAuth]);
 
   const clearError = (key: "email" | "password" | "confirmPassword") => {
     setErrors((current) => ({ ...current, [key]: undefined, form: undefined }));
@@ -78,10 +106,25 @@ export default function SignupForm() {
     try {
       await signup(trimmedEmail, password);
       logEvent("sign_up", { method: "password" });
-      const dest = nextPath.startsWith("/") ? nextPath : "/";
-      router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
+      router.push(`/onboarding?next=${encodeURIComponent(safeNextPath(nextPath))}`);
     } catch (error) {
       setErrors({ form: messageForError(error) });
+      setLoading(false);
+    }
+  };
+
+  const handleApple = async () => {
+    if (loading) return;
+    setErrors({});
+    setLoading(true);
+    try {
+      const result = await signInWithApple();
+      if (result.redirected) return;
+      await finishAppleAuth(result.isNewUser);
+    } catch (error) {
+      if (!isAuthCancelled(error)) {
+        setErrors({ form: messageForError(error) });
+      }
       setLoading(false);
     }
   };
@@ -91,6 +134,15 @@ export default function SignupForm() {
       <div className={styles.card}>
         <h1 className={styles.title}>Sign Up</h1>
         <p className={styles.subtitle}>Create a new account</p>
+        <AppleSignInButton
+          onClick={handleApple}
+          loading={loading}
+          label="Sign up with Apple"
+          className={styles.appleButton}
+        />
+        <div className={styles.divider} role="separator">
+          or
+        </div>
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           <label className={styles.label} htmlFor="email">
             Email

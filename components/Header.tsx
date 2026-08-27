@@ -85,8 +85,8 @@ export default function Header() {
           <div className={styles.account}>
             {user ? (
               <>
-                <span className={styles.email} title={user.email || undefined}>
-                  {user.email}
+                <span className={styles.email} title={user.email || user.displayName || undefined}>
+                  {user.email || user.displayName || "Account"}
                 </span>
                 <button
                   type="button"

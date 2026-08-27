@@ -110,9 +110,32 @@ export function getListingStatusKey(property: Property): string {
     .toUpperCase();
 }
 
+function eventDay(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return null;
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function listingRelistedAfterSale(property: Property): boolean {
+  const soldOn = eventDay(property.sold_on);
+  if (soldOn == null) return false;
+  const listedOn = eventDay(property.listed_on);
+  const priceChangedOn = eventDay(property.price_changed_on);
+  return (
+    (listedOn != null && listedOn > soldOn) ||
+    (priceChangedOn != null && priceChangedOn > soldOn)
+  );
+}
+
 export function getListingPhrase(property: Property): string {
   const status = getListingStatusKey(property);
-  if (status.includes("SOLD") && !status.includes("PENDING") && !status.includes("CONDITION")) {
+  if (
+    status.includes("SOLD") &&
+    !status.includes("PENDING") &&
+    !status.includes("CONDITION") &&
+    !listingRelistedAfterSale(property)
+  ) {
     return "sold";
   }
   if (status.includes("PENDING") || status.includes("CONDITION")) return "pending sale";
