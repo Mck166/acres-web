@@ -13,6 +13,8 @@ import { getPropertyHref, getPropertyId } from "@/lib/properties";
 import { useAuth } from "@/components/AuthProvider";
 import HeartIcon from "@/components/HeartIcon";
 import styles from "@/components/PropertyFavoriteButton.module.css";
+import { needsEmailVerification } from "@/lib/emailVerification";
+import { verifyEmailPath } from "@/lib/completeAuth";
 
 export default function PropertyFavoriteButton({ property }: { property: Property }) {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function PropertyFavoriteButton({ property }: { property: Propert
 
   useEffect(() => {
     if (!user || !propertyId) return;
+    if (needsEmailVerification(user)) return;
     let cancelled = false;
     getUserFavorites(user.uid)
       .then((favorites) => {
@@ -41,6 +44,10 @@ export default function PropertyFavoriteButton({ property }: { property: Propert
   const handleClick = useCallback(async () => {
     if (!user) {
       router.push(`/login?next=${encodeURIComponent(href)}`);
+      return;
+    }
+    if (needsEmailVerification(user)) {
+      router.push(verifyEmailPath(href));
       return;
     }
     if (!propertyId || busy) return;

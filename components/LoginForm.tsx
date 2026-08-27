@@ -9,6 +9,7 @@ import AppleSignInButton from "@/components/AppleSignInButton";
 import GlassButton from "@/components/GlassButton";
 import { isAuthCancelled } from "@/lib/appleAuth";
 import { pathAfterSignIn } from "@/lib/completeAuth";
+import { needsEmailVerification } from "@/lib/emailVerification";
 import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
@@ -38,7 +39,7 @@ function messageForError(error: unknown) {
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, signInWithApple, pendingOAuth, clearPendingOAuth } = useAuth();
+  const { login, signInWithApple, pendingOAuth, clearPendingOAuth, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,6 +47,12 @@ export default function LoginForm() {
   const oauthHandled = useRef(false);
 
   const nextPath = searchParams.get("next") || "/";
+
+  useEffect(() => {
+    if (!user || loading || pendingOAuth) return;
+    if (!needsEmailVerification(user)) return;
+    router.replace(`/verify-email?next=${encodeURIComponent(nextPath)}`);
+  }, [loading, nextPath, pendingOAuth, router, user]);
 
   const finishAppleAuth = useCallback(async (isNewUser: boolean) => {
     logEvent(isNewUser ? "sign_up" : "login", { method: "apple" });

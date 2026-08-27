@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { getUserData, saveUserOnboarding } from "@/lib/firestore";
 import { splitDisplayName } from "@/lib/appleAuth";
+import { needsEmailVerification } from "@/lib/emailVerification";
+import { verifyEmailPath } from "@/lib/completeAuth";
 import styles from "@/app/onboarding/page.module.css";
 
 const QUESTIONS = [
@@ -69,6 +71,10 @@ export default function OnboardingForm() {
 
   useEffect(() => {
     if (!user) return;
+    if (needsEmailVerification(user)) {
+      router.replace(verifyEmailPath(nextPath));
+      return;
+    }
 
     let cancelled = false;
     getUserData(user.uid)
@@ -158,6 +164,14 @@ export default function OnboardingForm() {
         <p className={styles.status}>
           <Link href="/signup">Sign up</Link> to create your Acres account.
         </p>
+      </div>
+    );
+  }
+
+  if (needsEmailVerification(user)) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.status}>Loading…</p>
       </div>
     );
   }

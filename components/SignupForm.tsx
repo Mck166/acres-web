@@ -8,7 +8,8 @@ import { useAuth } from "@/components/AuthProvider";
 import AppleSignInButton from "@/components/AppleSignInButton";
 import GlassButton from "@/components/GlassButton";
 import { isAuthCancelled } from "@/lib/appleAuth";
-import { pathAfterSignIn, safeNextPath } from "@/lib/completeAuth";
+import { pathAfterSignIn } from "@/lib/completeAuth";
+import { needsEmailVerification } from "@/lib/emailVerification";
 import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
@@ -40,7 +41,7 @@ function messageForError(error: unknown) {
 export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signup, signInWithApple, pendingOAuth, clearPendingOAuth } = useAuth();
+  const { signup, signInWithApple, pendingOAuth, clearPendingOAuth, user } = useAuth();
   const nextPath = searchParams.get("next") || "/properties";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,6 +54,12 @@ export default function SignupForm() {
     form?: string;
   }>({});
   const oauthHandled = useRef(false);
+
+  useEffect(() => {
+    if (!user || loading || pendingOAuth) return;
+    if (!needsEmailVerification(user)) return;
+    router.replace(`/verify-email?next=${encodeURIComponent(nextPath)}`);
+  }, [loading, nextPath, pendingOAuth, router, user]);
 
   const finishAppleAuth = useCallback(async (isNewUser: boolean) => {
     logEvent(isNewUser ? "sign_up" : "login", { method: "apple" });
@@ -106,7 +113,7 @@ export default function SignupForm() {
     try {
       await signup(trimmedEmail, password);
       logEvent("sign_up", { method: "password" });
-      router.push(`/onboarding?next=${encodeURIComponent(safeNextPath(nextPath))}`);
+      router.push(await pathAfterSignIn(nextPath));
     } catch (error) {
       setErrors({ form: messageForError(error) });
       setLoading(false);

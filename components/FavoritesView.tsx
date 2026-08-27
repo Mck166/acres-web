@@ -14,6 +14,8 @@ import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
 import PropertyCard from "@/components/PropertyCard";
 import styles from "@/components/FavoritesView.module.css";
+import { needsEmailVerification } from "@/lib/emailVerification";
+import { verifyEmailPath } from "@/lib/completeAuth";
 
 export default function FavoritesView() {
   const { user, loading: authLoading } = useAuth();
@@ -48,6 +50,10 @@ export default function FavoritesView() {
 
   useEffect(() => {
     if (!user) return;
+    if (needsEmailVerification(user)) {
+      setLoading(false);
+      return;
+    }
 
     const uid = user.uid;
     let cancelled = false;
@@ -120,6 +126,18 @@ export default function FavoritesView() {
         <h1>Please sign in to view favorites</h1>
         <p>
           <Link href="/login?next=/favorites">Login</Link> to see the properties you have saved.
+        </p>
+      </div>
+    );
+  }
+
+  if (needsEmailVerification(user)) {
+    return (
+      <div className={styles.status}>
+        <h1>Confirm your email</h1>
+        <p>
+          <Link href={verifyEmailPath("/favorites")}>Confirm your email</Link> to save and view
+          favorites.
         </p>
       </div>
     );

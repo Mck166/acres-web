@@ -24,6 +24,10 @@ import {
   signInWithApple as startAppleSignIn,
   type AppleSignInResult,
 } from "@/lib/appleAuth";
+import {
+  needsEmailVerification,
+  sendVerificationEmail,
+} from "@/lib/emailVerification";
 
 type PendingOAuth = {
   isNewUser: boolean;
@@ -31,12 +35,14 @@ type PendingOAuth = {
 
 type AuthContextValue = {
   user: User | null;
+  emailVerified: boolean;
   loading: boolean;
   pendingOAuth: PendingOAuth | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<AppleSignInResult>;
   clearPendingOAuth: () => void;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -52,8 +58,14 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingOAuth, setPendingOAuth] = useState<PendingOAuth | null>(null);
+
+  const syncUser = useCallback((nextUser: User | null) => {
+    setUser(nextUser);
+    setEmailVerified(!!nextUser?.emailVerified);
+  }, []);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -65,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-          setUser(nextUser);
+          syncUser(nextUser);
           setLoading(false);
         });
         completeAppleRedirect()
@@ -79,15 +91,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
     return () => unsubscribe();
-  }, []);
+  }, [syncUser]);
+
+  const refreshUser = useCallback(async () => {
+    const current = getFirebaseAuth().currentUser;
+    if (!current) {
+      syncUser(null);
+      return;
+    }
+    await current.reload();
+    syncUser(getFirebaseAuth().currentUser);
+  }, [syncUser]);
 
   const login = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
-  }, []);
+    const cred = await signInWithEmailAndPassword(
+      getFirebaseAuth(),
+      email.trim(),
+      password,
+    );
+    syncUser(cred.user);
+    if (needsEmailVerification(cred.user)) {
+      try {
+        await sendVerificationEmail(cred.user);
+      } catch (error) {
+        console.error("Error sending verification email:", error);
+      }
+    }
+  }, [syncUser]);
 
   const signup = useCallback(async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
-  }, []);
+    const cred = await createUserWithEmailAndPassword(
+      getFirebaseAuth(),
+      email.trim(),
+      password,
+    );
+    syncUser(cred.user);
+    try {
+      await sendVerificationEmail(cred.user);
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+    }
+  }, [syncUser]);
 
   const signInWithApple = useCallback(async () => {
     return startAppleSignIn();
@@ -104,22 +148,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      emailVerified,
       loading,
       pendingOAuth,
       login,
       signup,
       signInWithApple,
       clearPendingOAuth,
+      refreshUser,
       logout,
     }),
     [
       user,
+      emailVerified,
       loading,
       pendingOAuth,
       login,
       signup,
       signInWithApple,
       clearPendingOAuth,
+      refreshUser,
       logout,
     ],
   );

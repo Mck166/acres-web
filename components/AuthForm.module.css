@@ -81,6 +81,41 @@
   font-weight: 500;
 }
 
+.formSuccess {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(91, 146, 121, 0.12);
+  color: var(--acres-green);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.email {
+  font-weight: 600;
+  color: var(--acres-text);
+}
+
+.textButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--acres-green);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.textButton:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.textButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .submit {
   margin-top: 8px;
   margin-bottom: 20px;
