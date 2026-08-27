@@ -76,10 +76,11 @@ type RequestOptions = {
   timeout?: number;
   revalidate?: number | false;
   signal?: AbortSignal;
+  headers?: Record<string, string>;
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, timeout = DEFAULT_TIMEOUT_MS, revalidate, signal } = options;
+  const { method = "GET", body, timeout = DEFAULT_TIMEOUT_MS, revalidate, signal, headers } = options;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
   const onAbort = () => controller.abort();
@@ -98,6 +99,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers: {
       Accept: "application/json",
       ...(body ? { "Content-Type": "application/json" } : {}),
+      ...headers,
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   };
@@ -275,6 +277,27 @@ export async function favoriteProperty(propertyId: string, firebaseUid?: string 
     );
   } catch (error) {
     console.error("Error favoriting property:", error);
+    return { success: false };
+  }
+}
+
+export async function requestWelcomeEmail() {
+  try {
+    const { getFirebaseAuth } = await import("@/lib/firebase");
+    const user = getFirebaseAuth().currentUser;
+    if (!user) return { success: false };
+    const token = await user.getIdToken();
+    return await request<{ success?: boolean; sent?: boolean }>(
+      "/emails/welcome",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000,
+        revalidate: false,
+      },
+    );
+  } catch (error) {
+    console.warn("Could not send welcome email:", error);
     return { success: false };
   }
 }

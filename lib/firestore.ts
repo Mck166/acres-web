@@ -18,6 +18,8 @@ export type UserProfile = {
   browsingStatus?: string;
   phoneNumber?: string;
   profilePictureUrl?: string;
+  email?: string;
+  notifyEmail?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -45,17 +47,24 @@ export async function saveUserOnboarding(userId: string, onboardingData: Onboard
 
   const db = getFirebaseDb();
   const userRef = doc(db, "users", userId);
+  const existingSnap = await getDoc(userRef);
+  const existing = existingSnap.exists() ? existingSnap.data() || {} : {};
   const now = new Date().toISOString();
+  const payload: Record<string, unknown> = {
+    ...onboardingData,
+    updatedAt: now,
+  };
+  if (currentUser?.email) {
+    payload.email = currentUser.email;
+  }
+  if (existing.notifyEmail !== false) {
+    payload.notifyEmail = true;
+  }
+  if (!existing.createdAt) {
+    payload.createdAt = now;
+  }
 
-  await setDoc(
-    userRef,
-    {
-      ...onboardingData,
-      createdAt: now,
-      updatedAt: now,
-    },
-    { merge: true },
-  );
+  await setDoc(userRef, payload, { merge: true });
 
   return true;
 }

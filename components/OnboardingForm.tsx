@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { getUserData, saveUserOnboarding } from "@/lib/firestore";
+import { requestWelcomeEmail } from "@/lib/api";
 import { splitDisplayName } from "@/lib/appleAuth";
 import { needsEmailVerification } from "@/lib/emailVerification";
 import { verifyEmailPath } from "@/lib/completeAuth";
@@ -132,6 +133,7 @@ export default function OnboardingForm() {
         isFirstTimeHomebuyer: answers.isFirstTimeHomebuyer,
         browsingStatus: answers.browsingStatus,
       });
+      void requestWelcomeEmail();
       router.push(nextPath.startsWith("/") ? nextPath : "/");
     } catch (saveError) {
       console.error("Error saving onboarding:", saveError);
