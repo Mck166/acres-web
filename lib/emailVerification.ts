@@ -1,5 +1,6 @@
 import { FirebaseError } from "firebase/app";
-import { sendEmailVerification, type User } from "firebase/auth";
+import { sendEmailVerification, sendPasswordResetEmail, type User } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { getSiteUrl } from "@/lib/site";
 
 export function needsEmailVerification(user: User | null | undefined) {
@@ -18,9 +19,23 @@ function continueUrl() {
   return `${getSiteUrl()}/verify-email`;
 }
 
+function loginContinueUrl() {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/login`;
+  }
+  return `${getSiteUrl()}/login`;
+}
+
 export async function sendVerificationEmail(user: User) {
   await sendEmailVerification(user, {
     url: continueUrl(),
+    handleCodeInApp: false,
+  });
+}
+
+export async function sendPasswordReset(email: string) {
+  await sendPasswordResetEmail(getFirebaseAuth(), email.trim(), {
+    url: loginContinueUrl(),
     handleCodeInApp: false,
   });
 }
@@ -39,6 +54,10 @@ export function messageForVerificationError(error: unknown) {
       return "Too many emails sent. Wait a few minutes and try again.";
     case "auth/network-request-failed":
       return "No connection. Check your network and try again.";
+    case "auth/invalid-email":
+      return "That email address is not valid.";
+    case "auth/missing-email":
+      return "Enter your email address.";
     default:
       return error instanceof Error
         ? error.message

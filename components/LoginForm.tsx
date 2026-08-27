@@ -9,7 +9,11 @@ import AppleSignInButton from "@/components/AppleSignInButton";
 import GlassButton from "@/components/GlassButton";
 import { isAuthCancelled } from "@/lib/appleAuth";
 import { pathAfterSignIn } from "@/lib/completeAuth";
-import { needsEmailVerification } from "@/lib/emailVerification";
+import {
+  messageForVerificationError,
+  needsEmailVerification,
+  sendPasswordReset,
+} from "@/lib/emailVerification";
 import { logEvent } from "@/lib/analytics";
 import styles from "@/components/AuthForm.module.css";
 
@@ -44,6 +48,8 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const oauthHandled = useRef(false);
 
   const nextPath = searchParams.get("next") || "/";
@@ -76,7 +82,7 @@ export default function LoginForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (loading) return;
+    if (loading || resetting) return;
 
     const trimmedEmail = email.trim();
     const nextErrors: { email?: string; password?: string } = {};
@@ -101,8 +107,31 @@ export default function LoginForm() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (loading || resetting) return;
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setResetSuccess(null);
+      setErrors({ email: "Enter your email address to reset your password." });
+      return;
+    }
+
+    setErrors({});
+    setResetSuccess(null);
+    setResetting(true);
+    try {
+      await sendPasswordReset(trimmedEmail);
+      setResetSuccess("If an account exists for that email, we sent a reset link.");
+    } catch (error) {
+      setErrors({ form: messageForVerificationError(error) });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const handleApple = async () => {
-    if (loading) return;
+    if (loading || resetting) return;
     setErrors({});
     setLoading(true);
     try {
@@ -126,6 +155,7 @@ export default function LoginForm() {
         <AppleSignInButton
           onClick={handleApple}
           loading={loading}
+          disabled={resetting}
           className={styles.appleButton}
         />
         <div className={styles.divider} role="separator">
@@ -145,9 +175,10 @@ export default function LoginForm() {
             value={email}
             onChange={(event) => {
               setEmail(event.target.value);
+              setResetSuccess(null);
               setErrors((current) => ({ ...current, email: undefined, form: undefined }));
             }}
-            disabled={loading}
+            disabled={loading || resetting}
           />
           {errors.email ? <p className={styles.fieldError}>{errors.email}</p> : null}
 
@@ -166,13 +197,31 @@ export default function LoginForm() {
               setPassword(event.target.value);
               setErrors((current) => ({ ...current, password: undefined, form: undefined }));
             }}
-            disabled={loading}
+            disabled={loading || resetting}
           />
           {errors.password ? <p className={styles.fieldError}>{errors.password}</p> : null}
 
-          {errors.form ? <div className={styles.formError}>{errors.form}</div> : null}
+          <div className={styles.forgotRow}>
+            <button
+              type="button"
+              className={styles.textButton}
+              onClick={handleResetPassword}
+              disabled={loading || resetting}
+            >
+              {resetting ? "Sending…" : "Forgot password?"}
+            </button>
+          </div>
 
-          <GlassButton title="Login" type="submit" loading={loading} className={styles.submit} />
+          {errors.form ? <div className={styles.formError}>{errors.form}</div> : null}
+          {resetSuccess ? <div className={styles.formSuccess}>{resetSuccess}</div> : null}
+
+          <GlassButton
+            title="Login"
+            type="submit"
+            loading={loading}
+            disabled={resetting}
+            className={styles.submit}
+          />
         </form>
         <p className={styles.switch}>
           Don&apos;t have an account?{" "}

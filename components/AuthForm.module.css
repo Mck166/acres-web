@@ -116,6 +116,12 @@
   opacity: 0.5;
 }
 
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px 0 16px;
+}
+
 .submit {
   margin-top: 8px;
   margin-bottom: 20px;
