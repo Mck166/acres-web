@@ -70,7 +70,12 @@ export async function saveSignupProfile(userId: string, answers: SignupAnswers):
     await updateUserData(userId, { slug, profilePublic: true, accountType: "agent" });
   }
 
-  return { ...payload, slug };
+  return {
+    ...payload,
+    slug,
+    isFirstTimeHomebuyer: payload.isFirstTimeHomebuyer ?? undefined,
+    browsingStatus: payload.browsingStatus ?? undefined,
+  };
 }
 
 export async function publishAgentProfileIfNeeded(userId: string) {

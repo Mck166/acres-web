@@ -97,7 +97,9 @@ export default function PostCard({
               onSubmit={async (event) => {
                 event.preventDefault();
                 if (!draft.trim()) return;
-                const created = await addComment(post.id, viewer, draft.trim());
+                const uid = viewer.uid;
+                if (!uid) return;
+                const created = await addComment(post.id, { ...viewer, uid }, draft.trim());
                 setComments((current) => [...current, created]);
                 setDraft("");
               }}

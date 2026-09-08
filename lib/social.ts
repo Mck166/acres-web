@@ -202,7 +202,7 @@ export async function createFollow(followerId: string, agentId: string, options:
     followerId,
     agentId,
     claimedClient,
-    clientStatus: claimedClient ? "pending" : "none",
+    clientStatus: (claimedClient ? "pending" : "none") as FollowRecord["clientStatus"],
     createdAt: nowIso(),
     updatedAt: nowIso(),
   };
