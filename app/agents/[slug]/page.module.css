@@ -1,14 +1,31 @@
 .page {
-  max-width: 1100px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 32px 20px 72px;
 }
 
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 28px;
+  margin-bottom: 16px;
+}
+
+.share {
+  border: 0;
+  background: none;
+  color: var(--acres-green);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .identity {
   display: flex;
-  gap: 20px;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 28px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .avatar,
@@ -17,6 +34,7 @@
   height: 96px;
   border-radius: 48px;
   object-fit: cover;
+  margin-bottom: 12px;
 }
 
 .avatarFallback {
@@ -32,37 +50,15 @@
   margin: 0 0 6px;
 }
 
-.identity p {
-  margin: 0;
+.identity p,
+.meta {
+  margin: 4px 0 0;
   color: var(--acres-brown);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.actions button,
-.reviewForm button {
-  border: 0;
-  background: var(--acres-green);
-  color: #fff;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
-  gap: 28px;
 }
 
 .about {
   line-height: 1.55;
+  margin: 0 0 12px;
 }
 
 .links {
@@ -77,39 +73,60 @@
   font-weight: 600;
 }
 
-.review,
-.activity {
-  display: block;
+.page h2 {
+  margin: 24px 0 12px;
+  font-size: 18px;
+}
+
+.activitySection {
+  margin-top: 8px;
+}
+
+.activityRow {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.activityCard {
+  flex: 0 0 160px;
+  overflow: hidden;
   background: var(--acres-surface);
   border: 1px solid var(--acres-border);
   border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 8px;
   text-decoration: none;
   color: inherit;
 }
 
-.reviewForm {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.reviewForm textarea,
-.reviewForm select {
+.activityPhoto {
   width: 100%;
-  border: 1px solid var(--acres-border);
-  border-radius: 10px;
-  padding: 10px;
+  height: 88px;
+  object-fit: cover;
+  background: var(--acres-bg);
 }
 
-@media (max-width: 800px) {
-  .identity {
-    flex-direction: column;
-    text-align: center;
-  }
+.activityPhotoFallback {
+  display: grid;
+  place-items: center;
+  color: var(--acres-brown);
+  font-size: 12px;
+  font-weight: 600;
+}
 
-  .layout {
-    grid-template-columns: 1fr;
-  }
+.activityCopy {
+  padding: 12px;
+}
+
+.activityCopy strong {
+  display: block;
+  color: var(--acres-green);
+  margin-bottom: 6px;
+}
+
+.activityCopy span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
