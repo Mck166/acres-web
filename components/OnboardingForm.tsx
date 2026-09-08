@@ -4,47 +4,75 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { getUserData, saveUserOnboarding } from "@/lib/firestore";
+import { getUserData, saveUserOnboarding, updateUserData } from "@/lib/firestore";
 import { requestWelcomeEmail } from "@/lib/api";
+import { publishAgentProfile } from "@/lib/social";
 import { splitDisplayName } from "@/lib/appleAuth";
 import { needsEmailVerification } from "@/lib/emailVerification";
 import { destinationAfterOnboarding, verifyEmailPath } from "@/lib/completeAuth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import styles from "@/app/onboarding/page.module.css";
 
-const QUESTIONS = [
-  {
-    id: "firstName",
-    question: "What is your first name?",
-    type: "text" as const,
-    placeholder: "Enter your first name",
-    autoComplete: "given-name",
-  },
-  {
-    id: "lastName",
-    question: "What is your last name?",
-    type: "text" as const,
-    placeholder: "Enter your last name",
-    autoComplete: "family-name",
-  },
-  {
-    id: "isFirstTimeHomebuyer",
-    question: "Are you a first time homebuyer?",
-    type: "yesno" as const,
-  },
-  {
-    id: "browsingStatus",
-    question: "Are you ready to buy or just browsing?",
-    type: "choice" as const,
-    options: ["Ready to Buy", "Just Browsing"],
-  },
-];
+function parseLinks(text: string) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((url) => ({
+      label: url.replace(/^https?:\/\//, ""),
+      url: url.includes("://") ? url : `https://${url}`,
+    }));
+}
+
+function questionsFor(accountType: string | null) {
+  const shared = [
+    {
+      id: "accountType",
+      question: "What kind of account do you want?",
+      type: "choice" as const,
+      options: ["Looking for a home", "I am an agent"],
+    },
+    {
+      id: "firstName",
+      question: "What is your first name?",
+      type: "text" as const,
+      placeholder: "Enter your first name",
+      autoComplete: "given-name",
+    },
+    {
+      id: "lastName",
+      question: "What is your last name?",
+      type: "text" as const,
+      placeholder: "Enter your last name",
+      autoComplete: "family-name",
+    },
+  ];
+  if (accountType === "I am an agent") {
+    return [
+      ...shared,
+      { id: "yearsAsAgent", question: "How many years have you been an agent?", type: "text" as const, placeholder: "Optional", skippable: true, autoComplete: "off" },
+      { id: "company", question: "Which company do you work for?", type: "text" as const, placeholder: "Optional", skippable: true, autoComplete: "organization" },
+      { id: "about", question: "Tell people a bit about you", type: "textarea" as const, placeholder: "Optional", skippable: true },
+      { id: "socialLinks", question: "Add social or website links", type: "textarea" as const, placeholder: "One link per line", skippable: true },
+    ];
+  }
+  return [
+    ...shared,
+    { id: "isFirstTimeHomebuyer", question: "Are you a first time homebuyer?", type: "yesno" as const },
+    { id: "browsingStatus", question: "Are you ready to buy or just browsing?", type: "choice" as const, options: ["Ready to Buy", "Just Browsing"] },
+  ];
+}
 
 type Answers = {
+  accountType: string | null;
   firstName: string;
   lastName: string;
   isFirstTimeHomebuyer: boolean | null;
   browsingStatus: string | null;
+  yearsAsAgent: string;
+  company: string;
+  about: string;
+  socialLinks: string;
 };
 
 export default function OnboardingForm() {
@@ -56,14 +84,20 @@ export default function OnboardingForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Answers>({
+    accountType: null,
     firstName: "",
     lastName: "",
     isFirstTimeHomebuyer: null,
     browsingStatus: null,
+    yearsAsAgent: "",
+    company: "",
+    about: "",
+    socialLinks: "",
   });
 
   const nextPath = searchParams.get("next") || "/properties";
-  const currentQuestion = QUESTIONS[currentStep];
+  const QUESTIONS = questionsFor(answers.accountType);
+  const currentQuestion = QUESTIONS[Math.min(currentStep, QUESTIONS.length - 1)];
   const appleNames = splitDisplayName(user?.displayName);
   const resolvedAnswers: Answers = {
     ...answers,
@@ -99,11 +133,12 @@ export default function OnboardingForm() {
   }, [nextPath, router, user]);
 
   const canProceed = useMemo(() => {
+    if ("skippable" in currentQuestion && currentQuestion.skippable) return true;
     const value = resolvedAnswers[currentQuestion.id as keyof Answers];
-    if (currentQuestion.type === "text") {
+    if (currentQuestion.type === "text" || currentQuestion.type === "textarea") {
       return typeof value === "string" && value.trim().length > 0;
     }
-    return value !== null && value !== undefined;
+    return value !== null && value !== undefined && value !== "";
   }, [currentQuestion, resolvedAnswers]);
 
   const handleComplete = async () => {
@@ -112,7 +147,8 @@ export default function OnboardingForm() {
       setError("Please enter your first and last name.");
       return;
     }
-    if (answers.isFirstTimeHomebuyer === null || !answers.browsingStatus) {
+    const type = answers.accountType === "I am an agent" ? "agent" : "client";
+    if (type === "client" && (answers.isFirstTimeHomebuyer === null || !answers.browsingStatus)) {
       setError("Please answer every question.");
       return;
     }
@@ -126,14 +162,24 @@ export default function OnboardingForm() {
         router.replace(verifyEmailPath(nextPath));
         return;
       }
-      await saveUserOnboarding(current.uid, {
+      const payload = {
         firstName: resolvedAnswers.firstName.trim(),
         lastName: resolvedAnswers.lastName.trim(),
-        isFirstTimeHomebuyer: answers.isFirstTimeHomebuyer,
-        browsingStatus: answers.browsingStatus,
-      });
+        accountType: type as "client" | "agent",
+        isFirstTimeHomebuyer: type === "client" ? answers.isFirstTimeHomebuyer : null,
+        browsingStatus: type === "client" ? answers.browsingStatus : null,
+        yearsAsAgent: answers.yearsAsAgent,
+        company: answers.company,
+        about: answers.about,
+        socialLinks: parseLinks(answers.socialLinks),
+      };
+      await saveUserOnboarding(current.uid, payload);
+      if (type === "agent") {
+        const slug = await publishAgentProfile(current.uid, { ...payload, profilePublic: true });
+        await updateUserData(current.uid, { slug, profilePublic: true, accountType: "agent" });
+      }
       void requestWelcomeEmail();
-      router.push(destinationAfterOnboarding(nextPath));
+      router.push(type === "agent" ? "/feed" : destinationAfterOnboarding(nextPath));
     } catch (saveError) {
       console.error("Error saving onboarding:", saveError);
       setError("We could not save your details. Please try again.");
@@ -248,7 +294,10 @@ export default function OnboardingForm() {
                     className={`${styles.option}${value === option ? ` ${styles.optionSelected}` : ""}`}
                     onClick={() => {
                       setError(null);
-                      setAnswers((current) => ({ ...current, browsingStatus: option }));
+                      setAnswers((current) => ({
+                        ...current,
+                        [currentQuestion.id]: option,
+                      }));
                     }}
                     aria-pressed={value === option}
                   >
@@ -256,6 +305,23 @@ export default function OnboardingForm() {
                   </button>
                 ))}
               </div>
+            ) : null}
+
+            {currentQuestion.type === "textarea" ? (
+              <textarea
+                className={`${styles.input} ${styles.textarea}${error ? ` ${styles.inputError}` : ""}`}
+                name={currentQuestion.id}
+                placeholder={currentQuestion.placeholder}
+                value={typeof value === "string" ? value : ""}
+                onChange={(event) => {
+                  setError(null);
+                  setAnswers((current) => ({
+                    ...current,
+                    [currentQuestion.id]: event.target.value,
+                  }));
+                }}
+                disabled={loading}
+              />
             ) : null}
 
             {currentQuestion.type === "text" ? (
@@ -286,6 +352,11 @@ export default function OnboardingForm() {
             {currentStep > 0 ? (
               <button type="button" className={styles.back} onClick={handleBack} disabled={loading}>
                 Back
+              </button>
+            ) : null}
+            {"skippable" in currentQuestion && currentQuestion.skippable ? (
+              <button type="button" className={styles.back} onClick={() => handleNext()} disabled={loading}>
+                Skip
               </button>
             ) : null}
             <button type="submit" className={styles.next} disabled={!canProceed || loading}>

@@ -1,0 +1,115 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 72px;
+}
+
+.identity {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.avatar,
+.avatarFallback {
+  width: 96px;
+  height: 96px;
+  border-radius: 48px;
+  object-fit: cover;
+}
+
+.avatarFallback {
+  display: grid;
+  place-items: center;
+  background: var(--acres-green);
+  color: #fff;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.identity h1 {
+  margin: 0 0 6px;
+}
+
+.identity p {
+  margin: 0;
+  color: var(--acres-brown);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button,
+.reviewForm button {
+  border: 0;
+  background: var(--acres-green);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 28px;
+}
+
+.about {
+  line-height: 1.55;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.links a {
+  color: var(--acres-green);
+  font-weight: 600;
+}
+
+.review,
+.activity {
+  display: block;
+  background: var(--acres-surface);
+  border: 1px solid var(--acres-border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.reviewForm {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reviewForm textarea,
+.reviewForm select {
+  width: 100%;
+  border: 1px solid var(--acres-border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+@media (max-width: 800px) {
+  .identity {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,26 @@
+.wrap {
+  margin-top: 12px;
+}
+
+.button,
+.form button {
+  border: 0;
+  background: var(--acres-green);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.form input {
+  border: 1px solid var(--acres-border);
+  border-radius: 10px;
+  padding: 10px;
+}

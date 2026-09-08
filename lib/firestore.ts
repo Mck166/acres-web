@@ -11,6 +11,8 @@ import {
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 import { refreshAuthClaims } from "@/lib/emailVerification";
 
+export type SocialLink = { label: string; url: string };
+
 export type UserProfile = {
   firstName?: string;
   lastName?: string;
@@ -20,6 +22,18 @@ export type UserProfile = {
   profilePictureUrl?: string;
   email?: string;
   notifyEmail?: boolean;
+  notifyFavorites?: boolean;
+  notifyInactivity?: boolean;
+  notifyDownPayment?: boolean;
+  accountType?: "client" | "agent";
+  yearsAsAgent?: string;
+  company?: string;
+  about?: string;
+  socialLinks?: SocialLink[];
+  slug?: string;
+  profilePublic?: boolean;
+  confirmedAgentId?: string | null;
+  promptFirstPost?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -27,8 +41,14 @@ export type UserProfile = {
 export type OnboardingData = {
   firstName: string;
   lastName: string;
-  isFirstTimeHomebuyer: boolean;
-  browsingStatus: string;
+  isFirstTimeHomebuyer?: boolean | null;
+  browsingStatus?: string | null;
+  accountType: "client" | "agent";
+  yearsAsAgent?: string;
+  company?: string;
+  about?: string;
+  socialLinks?: SocialLink[];
+  promptFirstPost?: boolean;
 };
 
 export async function getUserData(userId: string): Promise<UserProfile | null> {
@@ -37,6 +57,20 @@ export async function getUserData(userId: string): Promise<UserProfile | null> {
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) return null;
   return userSnap.data() as UserProfile;
+}
+
+export async function updateUserData(userId: string, userData: Record<string, unknown>) {
+  const db = getFirebaseDb();
+  const userRef = doc(db, "users", userId);
+  await setDoc(
+    userRef,
+    {
+      ...userData,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+  return true;
 }
 
 export async function saveUserOnboarding(userId: string, onboardingData: OnboardingData) {

@@ -110,6 +110,7 @@
   white-space: nowrap;
   color: var(--acres-brown);
   font-size: 13px;
+  text-decoration: none;
 }
 
 .logout {

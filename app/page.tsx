@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { APP_STORE_URL, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import HomePosts from "@/components/HomePosts";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -36,6 +37,8 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      <HomePosts />
 
       <section className={styles.features} aria-labelledby="features-heading">
         <h2 id="features-heading">What you can do</h2>

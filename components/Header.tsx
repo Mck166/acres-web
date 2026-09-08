@@ -9,6 +9,7 @@ import styles from "@/components/Header.module.css";
 const NAV_LINKS = [
   { href: "/properties", label: "Properties" },
   { href: "/map", label: "Map" },
+  { href: "/feed", label: "Open Houses" },
   { href: "/favorites", label: "Favorites" },
   { href: "/blog", label: "Blog" },
 ];
@@ -85,9 +86,14 @@ export default function Header() {
           <div className={styles.account}>
             {user ? (
               <>
-                <span className={styles.email} title={user.email || user.displayName || undefined}>
+                <Link
+                  href="/account"
+                  className={styles.email}
+                  title={user.email || user.displayName || undefined}
+                  onClick={() => setMenuOpen(false)}
+                >
                   {user.email || user.displayName || "Account"}
-                </span>
+                </Link>
                 <button
                   type="button"
                   className={styles.logout}

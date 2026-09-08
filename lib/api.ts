@@ -281,25 +281,138 @@ export async function favoriteProperty(propertyId: string, firebaseUid?: string 
   }
 }
 
+async function authedRequest<T>(path: string, options: RequestOptions = {}) {
+  const { getFirebaseAuth } = await import("@/lib/firebase");
+  const user = getFirebaseAuth().currentUser;
+  if (!user) throw new Error("Sign in required");
+  const token = await user.getIdToken();
+  return request<T>(path, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}`, ...options.headers },
+    revalidate: false,
+  });
+}
+
 export async function requestWelcomeEmail() {
   try {
-    const { getFirebaseAuth } = await import("@/lib/firebase");
-    const user = getFirebaseAuth().currentUser;
-    if (!user) return { success: false };
-    const token = await user.getIdToken();
-    return await request<{ success?: boolean; sent?: boolean }>(
-      "/emails/welcome",
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000,
-        revalidate: false,
-      },
-    );
+    return await authedRequest<{ success?: boolean; sent?: boolean }>("/emails/welcome", {
+      method: "POST",
+      timeout: 15000,
+    });
   } catch (error) {
     console.warn("Could not send welcome email:", error);
     return { success: false };
   }
+}
+
+export async function claimAgentClient(agentId: string) {
+  return authedRequest<{ success?: boolean }>("/social/claim", {
+    method: "POST",
+    body: { agent_id: agentId },
+  });
+}
+
+export async function fetchAgentClients() {
+  const data = await authedRequest<{ clients?: Array<Record<string, unknown>> }>("/social/clients");
+  return data.clients || [];
+}
+
+export async function confirmAgentClient(clientId: string) {
+  return authedRequest("/social/clients/confirm", { method: "POST", body: { client_id: clientId } });
+}
+
+export async function declineAgentClient(clientId: string) {
+  return authedRequest("/social/clients/decline", { method: "POST", body: { client_id: clientId } });
+}
+
+export async function fetchClientFavoritesForAgent(clientId: string) {
+  const data = await authedRequest<{ properties?: Property[] }>(
+    `/agents/clients/${encodeURIComponent(clientId)}/favorites`,
+  );
+  return data.properties || [];
+}
+
+export async function createScheduledViewing(payload: {
+  propertyId: string;
+  slots: string[];
+  address?: string | null;
+}) {
+  return authedRequest("/viewings", {
+    method: "POST",
+    body: {
+      property_id: payload.propertyId,
+      slots: payload.slots,
+      address: payload.address || null,
+    },
+  });
+}
+
+export async function fetchMyViewings() {
+  const data = await authedRequest<{ viewings?: Array<Record<string, unknown>> }>("/viewings");
+  return data.viewings || [];
+}
+
+export async function confirmScheduledViewing(viewingId: string, slot: string) {
+  return authedRequest(`/viewings/${encodeURIComponent(viewingId)}/confirm`, {
+    method: "POST",
+    body: { slot },
+  });
+}
+
+export async function counterScheduledViewing(viewingId: string, slot: string) {
+  return authedRequest(`/viewings/${encodeURIComponent(viewingId)}/counter`, {
+    method: "POST",
+    body: { slot },
+  });
+}
+
+export async function acceptViewingCounter(viewingId: string) {
+  return authedRequest(`/viewings/${encodeURIComponent(viewingId)}/accept`, { method: "POST" });
+}
+
+export async function resolvePostPid(pid: string) {
+  return authedRequest<{ found: boolean; property: Property | null }>("/posts/resolve-pid", {
+    method: "POST",
+    body: { pid },
+  });
+}
+
+export async function reportOpenHouse(data: {
+  openHouseId: string;
+  propertyId?: string | null;
+  address?: string | null;
+  message: string;
+}) {
+  return authedRequest<{ success?: boolean; message?: string }>("/reports/open-house", {
+    method: "POST",
+    body: {
+      open_house_id: data.openHouseId,
+      property_id: data.propertyId || null,
+      address: data.address || null,
+      message: data.message,
+    },
+  });
+}
+
+export async function submitSupport(data: { category: string; message: string }) {
+  return authedRequest<{ success?: boolean; message?: string }>("/support", {
+    method: "POST",
+    body: { category: data.category, message: data.message },
+  });
+}
+
+export async function fetchTodayActivity(limit = 12) {
+  const params = new URLSearchParams();
+  params.set("recent_only", "true");
+  params.set("include_listed", "true");
+  params.set("include_price", "true");
+  params.set("include_pending", "false");
+  params.set("include_sold", "false");
+  params.set("limit", String(limit));
+  const data = await request<{ properties?: Property[] }>(`/feed?${params.toString()}`, {
+    revalidate: 60,
+  });
+  return data.properties || [];
 }
 
 export async function refreshSeenProperties(firebaseUid: string) {

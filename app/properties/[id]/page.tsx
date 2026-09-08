@@ -6,6 +6,7 @@ import { fetchFeed, fetchPropertyById } from "@/lib/api";
 import PropertyBackLink from "@/components/PropertyBackLink";
 import PropertyFavoriteButton from "@/components/PropertyFavoriteButton";
 import PropertyShareButton from "@/components/PropertyShareButton";
+import RequestViewingButton from "@/components/RequestViewingButton";
 import PropertyGallery from "@/components/PropertyGallery";
 import PropertyViewTracker from "@/components/PropertyViewTracker";
 import { SITE_NAME } from "@/lib/site";
@@ -237,6 +238,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           <div className={styles.headerActions}>
             <PropertyShareButton url={shareUrl} title={`${address} | ${SITE_NAME}`} text={shareText} />
             <PropertyFavoriteButton property={property} />
+            <RequestViewingButton property={property} />
           </div>
         </header>
 

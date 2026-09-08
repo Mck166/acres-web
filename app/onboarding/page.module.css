@@ -71,6 +71,11 @@
   border-color: var(--acres-error);
 }
 
+.textarea {
+  min-height: 120px;
+  text-align: left;
+}
+
 .options {
   display: flex;
   flex-direction: column;

@@ -16,6 +16,18 @@ export function getAppleAppSiteAssociation() {
               "/": "/properties/*",
               comment: "Opens a property listing in the Acres app",
             },
+            {
+              "/": "/agents/*",
+              comment: "Opens an agent profile in the Acres app",
+            },
+            {
+              "/": "/feed",
+              comment: "Opens open houses in the Acres app",
+            },
+            {
+              "/": "/account/viewings",
+              comment: "Opens scheduled viewings in the Acres app",
+            },
           ],
         },
       ],

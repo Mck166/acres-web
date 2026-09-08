@@ -1,0 +1,32 @@
+.section {
+  margin: 48px 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+
+.header a {
+  color: var(--acres-green);
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.grid article {
+  background: var(--acres-surface);
+  border: 1px solid var(--acres-border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.grid p {
+  color: var(--acres-brown);
+}
