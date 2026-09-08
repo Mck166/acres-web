@@ -20,7 +20,7 @@ import { getUserData, updateUserData, type UserProfile } from "@/lib/firestore";
 import { filterUpcomingOpenHouses, matchPropertyForOpenHouse } from "@/lib/openHouse";
 import { displayNameOf, isAgentAccount } from "@/lib/slug";
 import { listOpenHouses, publishAgentProfile, unpublishAgentProfile, type OpenHouseRecord } from "@/lib/social";
-import { needsOnboarding, onboardingPath, verifyEmailPath } from "@/lib/completeAuth";
+import { verifyEmailPath } from "@/lib/completeAuth";
 import styles from "./page.module.css";
 
 function parseLinks(text: string) {
@@ -107,14 +107,7 @@ export default function AccountPage() {
       router.replace(verifyEmailPath("/account"));
       return;
     }
-    (async () => {
-      const data = await getUserData(user.uid);
-      if (needsOnboarding(data)) {
-        router.replace(onboardingPath("/account"));
-        return;
-      }
-      await reload();
-    })();
+    void reload();
   }, [loading, router, user]);
 
   useEffect(() => {

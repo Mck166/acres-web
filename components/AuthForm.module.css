@@ -11,6 +11,11 @@
   max-width: 440px;
 }
 
+.cardWide {
+  width: 100%;
+  max-width: 520px;
+}
+
 .title {
   margin: 0 0 8px;
   font-size: 32px;
@@ -187,4 +192,45 @@
 
 .switch a:hover {
   text-decoration: underline;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.option {
+  min-height: 48px;
+  padding: 14px 16px;
+  border: 2px solid var(--acres-border);
+  border-radius: 14px;
+  background: var(--acres-surface);
+  color: var(--acres-brown);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.option:hover:not(:disabled) {
+  border-color: var(--acres-green);
+}
+
+.optionSelected {
+  border-color: var(--acres-green);
+  background: var(--acres-green-light);
+  color: var(--acres-green);
+  font-weight: 600;
+}
+
+.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.textarea {
+  min-height: 96px;
+  resize: vertical;
 }

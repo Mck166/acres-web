@@ -48,6 +48,7 @@ export type OnboardingData = {
   company?: string;
   about?: string;
   socialLinks?: SocialLink[];
+  profilePublic?: boolean;
   promptFirstPost?: boolean;
 };
 
