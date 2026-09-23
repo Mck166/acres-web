@@ -15,6 +15,9 @@ import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 // Reads the counters the API writes from app events. See Acres-API/analytics.py
 // for the shape. Everything here is admin-only at the rules level, so a signed
 // out or non-admin visitor gets a permission error rather than empty data.
+//
+// Every load covers twice the selected range: the window on screen and the one
+// immediately before it, so each number can be shown against its own past.
 
 export type DayStats = {
   day: string;
@@ -28,10 +31,29 @@ export type DayStats = {
   screens: Record<string, number>;
 };
 
+export type PeriodTotals = {
+  /** Distinct devices that opened the app in the window. Only exact for the
+   * current window: `lastSeen` holds one timestamp per device, so a device
+   * active in both windows counts only against the newer one. */
+  uniqueUsers: number | null;
+  /** Active users summed across days, i.e. user-days. Exact for any window. */
+  userDays: number;
+  avgDailyUsers: number;
+  sessions: number;
+  newUsers: number;
+  screenViews: number;
+  propertySaves: number;
+  mapSearches: number;
+  foregroundSeconds: number;
+  secondsPerUserDay: number;
+};
+
 export type AnalyticsSummary = {
   days: DayStats[];
+  previousDays: DayStats[];
+  totals: PeriodTotals;
+  previous: PeriodTotals;
   totalUsers: number;
-  usersInRange: number;
   topScreens: { screen: string; views: number }[];
 };
 
@@ -107,12 +129,31 @@ async function countActiveUsers(day: string): Promise<number> {
   return snapshot.data().count;
 }
 
+function totalsOf(days: DayStats[], uniqueUsers: number | null): PeriodTotals {
+  const userDays = sumBy(days, "activeUsers");
+  const foregroundSeconds = sumBy(days, "foregroundSeconds");
+  return {
+    uniqueUsers,
+    userDays,
+    avgDailyUsers: days.length ? userDays / days.length : 0,
+    sessions: sumBy(days, "sessions"),
+    newUsers: sumBy(days, "newUsers"),
+    screenViews: sumBy(days, "screenViews"),
+    propertySaves: sumBy(days, "propertySaves"),
+    mapSearches: sumBy(days, "mapSearches"),
+    foregroundSeconds,
+    secondsPerUserDay: userDays ? foregroundSeconds / userDays : 0,
+  };
+}
+
 export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsSummary> {
   const db = getFirebaseDb();
-  const keys = rangeDays(days);
+  const keys = rangeDays(days * 2);
+  const previousKeys = keys.slice(0, days);
+  const currentKeys = keys.slice(days);
   const byDay = new Map(keys.map((day) => [day, emptyDay(day)]));
 
-  // One ranged read over document ids rather than a get per day.
+  // One ranged read over document ids covers both windows.
   const counters = await getDocs(
     query(
       collection(db, "analytics_daily"),
@@ -146,27 +187,32 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
     if (existing) existing.activeUsers = count;
   }
 
-  const [totalUsers, usersInRange] = await Promise.all([
+  const [totalUsers, uniqueUsers] = await Promise.all([
     getCountFromServer(collection(db, "analytics_users")).then((snap) => snap.data().count),
     getCountFromServer(
       query(
         collection(db, "analytics_users"),
-        where("lastSeen", ">=", atlanticMidnight(keys[0])),
+        where("lastSeen", ">=", atlanticMidnight(currentKeys[0])),
       ),
     ).then((snap) => snap.data().count),
   ]);
 
+  const current = currentKeys.map((day) => byDay.get(day) ?? emptyDay(day));
+  const earlier = previousKeys.map((day) => byDay.get(day) ?? emptyDay(day));
+
   const screenTotals = new Map<string, number>();
-  for (const day of byDay.values()) {
+  for (const day of current) {
     for (const [screen, views] of Object.entries(day.screens)) {
       screenTotals.set(screen, (screenTotals.get(screen) ?? 0) + views);
     }
   }
 
   return {
-    days: keys.map((day) => byDay.get(day) ?? emptyDay(day)),
+    days: current,
+    previousDays: earlier,
+    totals: totalsOf(current, uniqueUsers),
+    previous: totalsOf(earlier, null),
     totalUsers,
-    usersInRange,
     topScreens: Array.from(screenTotals.entries())
       .map(([screen, views]) => ({ screen, views }))
       .sort((a, b) => b.views - a.views),
@@ -175,6 +221,25 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
 
 export function sumBy(days: DayStats[], key: keyof DayStats): number {
   return days.reduce((total, day) => total + toNumber(day[key]), 0);
+}
+
+export type Change = {
+  direction: "up" | "down" | "flat";
+  label: string;
+};
+
+/** Percentage change against the same metric in the previous window. */
+export function changeVsPrevious(current: number, previous: number | null): Change | null {
+  if (previous === null) return null;
+  if (previous === 0 && current === 0) return null;
+  if (previous === 0) return { direction: "up", label: "New" };
+
+  const percent = Math.round(((current - previous) / previous) * 100);
+  if (percent === 0) return { direction: "flat", label: "Flat" };
+  return {
+    direction: percent > 0 ? "up" : "down",
+    label: `${percent > 0 ? "+" : ""}${percent}%`,
+  };
 }
 
 export function formatDuration(seconds: number): string {
