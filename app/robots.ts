@@ -8,7 +8,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/favorites", "/login", "/signup", "/onboarding", "/verify-email"],
+      disallow: [
+        "/admin",
+        "/favorites",
+        "/login",
+        "/signup",
+        "/onboarding",
+        "/verify-email",
+      ],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
   };

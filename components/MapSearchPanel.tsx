@@ -39,6 +39,26 @@ function hasAnyFilter(filters: typeof EMPTY_FILTERS) {
   return Object.values(filters).some((value) => value.trim());
 }
 
+type AcresEmbedWindow = Window & {
+  ReactNativeWebView?: { postMessage: (message: string) => void };
+};
+
+/**
+ * The app's Map tab is this page in a WebView, so a search made there is only
+ * visible to the app's analytics if we hand it over. Searches on the website
+ * itself go nowhere, which is intentional.
+ */
+function reportSearchToApp(query: string) {
+  if (typeof window === "undefined") return;
+  const bridge = (window as AcresEmbedWindow).ReactNativeWebView;
+  if (!bridge) return;
+  try {
+    bridge.postMessage(JSON.stringify({ type: "MAP_SEARCH", query }));
+  } catch {
+    // A failed hand-off is not worth breaking the search over.
+  }
+}
+
 type MapSearchPanelProps = {
   open: boolean;
   searching: boolean;
@@ -78,6 +98,7 @@ export default function MapSearchPanel({
       document.activeElement.blur();
     }
     onClose();
+    reportSearchToApp(term);
     onSearch({
       q: term,
       filters: {
