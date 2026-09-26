@@ -25,6 +25,7 @@ import {
 } from "@/lib/api";
 import {
   clusterPins,
+  compactPriceLabel,
   listingKind,
   pinLabel,
   pinTone,
@@ -78,6 +79,9 @@ const FABRIC_MIN_ZOOM = 16;
 const FETCH_DEBOUNCE_MS = 300;
 const BOUNDS_PAD = 0.12;
 const SEARCH_FLY_ZOOM = 16;
+/** Half-width in degrees of the box searched around a focused listing (~1 km). */
+const FOCUS_SPAN = 0.01;
+const FOCUS_FETCH_ZOOM = 16;
 
 const FOR_SALE = "#1f6fd0";
 const FOR_SALE_DARK = "#1a5cad";
@@ -142,6 +146,24 @@ function pinBadge(property: MapProperty) {
   return null;
 }
 
+/** A pin built from the listing itself, for when the map endpoint does not return it. */
+function focusPinFromProperty(property: Property): MapProperty | null {
+  const lat = Number.parseFloat(String(property.latitude ?? ""));
+  const lon = Number.parseFloat(String(property.longitude ?? ""));
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const price = typeof property.price_value === "number" ? property.price_value : null;
+  return {
+    id: property._id,
+    lat,
+    lon,
+    price,
+    priceLabel: compactPriceLabel(price),
+    status: property.Status ?? null,
+    pin: null,
+    pid: property.PID ?? null,
+  };
+}
+
 function padBounds(bounds: {
   minLat: number;
   minLon: number;
@@ -175,6 +197,13 @@ export default function PropertyMapCanvas() {
   const selectedIdRef = useRef<string | null>(null);
   const searchActiveRef = useRef(false);
   const urlView = parseMapViewParams(searchParams);
+  // Read once: the URL is rewritten on every pan, and the focus must outlive that.
+  const [focus] = useState(() =>
+    urlView?.only && urlView.property
+      ? { id: urlView.property, lat: urlView.lat, lng: urlView.lng }
+      : null,
+  );
+  const focusMode = focus !== null;
 
   const [mapStyle, setMapStyle] = useState<StyleSpecification | string | null>(null);
   const [properties, setProperties] = useState<MapProperty[]>([]);
@@ -187,7 +216,7 @@ export default function PropertyMapCanvas() {
   /** Bumped on every move so clusters re-form against the new screen positions. */
   const [viewTick, setViewTick] = useState(0);
   const [zoom, setZoom] = useState(urlView?.zoom ?? INITIAL_VIEW.zoom);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(focusMode);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -226,12 +255,13 @@ export default function PropertyMapCanvas() {
           lng: center.lng,
           lat: center.lat,
           zoom: map.getZoom(),
-          property: propertyId ?? null,
+          property: focus ? focus.id : (propertyId ?? null),
+          only: focusMode,
         }),
         { scroll: false },
       );
     },
-    [router],
+    [focus, focusMode, router],
   );
 
   const loadViewport = useCallback(() => {
@@ -243,7 +273,7 @@ export default function PropertyMapCanvas() {
     setViewTick((tick) => tick + 1);
     syncMapUrl(selectedIdRef.current ?? searchParams.get("property"));
 
-    if (searchActiveRef.current) return;
+    if (searchActiveRef.current || focusMode) return;
 
     const bounds = map.getBounds();
 
@@ -274,7 +304,52 @@ export default function PropertyMapCanvas() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
-  }, [searchParams, syncMapUrl]);
+  }, [focusMode, searchParams, syncMapUrl]);
+
+  // Focus mode loads the one listing once instead of everything in the viewport.
+  useEffect(() => {
+    if (!focus) return;
+
+    const controller = new AbortController();
+
+    fetchMapProperties(
+      {
+        minLat: focus.lat - FOCUS_SPAN,
+        maxLat: focus.lat + FOCUS_SPAN,
+        minLon: focus.lng - FOCUS_SPAN,
+        maxLon: focus.lng + FOCUS_SPAN,
+        zoom: FOCUS_FETCH_ZOOM,
+      },
+      { signal: controller.signal },
+    )
+      .then((nearby) => nearby.filter((property) => property.id === focus.id))
+      .catch((loadError: unknown) => {
+        if (isAbortError(loadError)) throw loadError;
+        console.error("Error loading focused listing pin:", loadError);
+        return [] as MapProperty[];
+      })
+      .then(async (matches) => {
+        if (matches.length > 0) return matches;
+        const property = await fetchPropertyById(focus.id);
+        const pin = property ? focusPinFromProperty(property) : null;
+        return pin ? [pin] : [];
+      })
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setProperties(next);
+        setError(next.length > 0 ? null : "Could not find this listing on the map.");
+      })
+      .catch((loadError: unknown) => {
+        if (isAbortError(loadError)) return;
+        console.error("Error loading focused listing:", loadError);
+        setError("Could not load this listing.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [focus]);
 
   const scheduleFetch = useCallback(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -500,8 +575,11 @@ export default function PropertyMapCanvas() {
   }, [selectedId, urlView, viewTick]);
 
   const activityPins = useMemo(
-    () => (searchActive ? properties : properties.filter((property) => Boolean(property.pin))),
-    [properties, searchActive],
+    () =>
+      searchActive || focusMode
+        ? properties
+        : properties.filter((property) => Boolean(property.pin)),
+    [focusMode, properties, searchActive],
   );
 
   // Clustering needs the map's current projection, so it runs after render, not during it.
@@ -763,11 +841,17 @@ export default function PropertyMapCanvas() {
       {searchActive && searchEmpty && !searching && !error ? (
         <p className={styles.status}>No matching listings</p>
       ) : null}
-      {zoom < QUIET_MIN_ZOOM && !loading && !error && !selectedId && !searchActive && !clusterList ? (
+      {zoom < QUIET_MIN_ZOOM &&
+      !loading &&
+      !error &&
+      !selectedId &&
+      !searchActive &&
+      !clusterList &&
+      !focusMode ? (
         <p className={styles.hint}>Zoom in to see all listings</p>
       ) : null}
 
-      {!clusterList ? (
+      {!clusterList && !focusMode ? (
         <MapSearchPanel
           open={searchOpen}
           searching={searching}

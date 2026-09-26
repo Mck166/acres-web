@@ -1,26 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
 import {
+  addDays,
   changeVsPrevious,
   fetchAnalyticsSummary,
   formatDayLabel,
   formatDuration,
+  formatRangeLabel,
   isAdminUser,
   pointsVsPrevious,
+  presetRange,
+  rangeLength,
   sumBy,
-  RANGE_OPTIONS,
+  todayKey,
+  validateRange,
+  PRESET_DAYS,
+  PUSH_KIND_LABELS,
   RETENTION_DAYS,
   type AnalyticsSummary,
+  type DateRange,
   type DayStats,
-  type RangeDays,
+  type PresetDays,
 } from "@/lib/adminAnalytics";
 import styles from "@/components/AnalyticsDashboard.module.css";
 
 type Theme = "light" | "dark";
+
+type Selection = { kind: "preset"; days: PresetDays } | { kind: "custom"; range: DateRange };
 
 const THEME_KEY = "acres:admin-theme";
 const THEME_EVENT = "acres:admin-theme-change";
@@ -57,6 +67,23 @@ function writeTheme(next: Theme) {
     // The toggle still works for this visit, it just will not be remembered.
   }
   window.dispatchEvent(new Event(THEME_EVENT));
+}
+
+function resolveRange(selection: Selection): DateRange {
+  return selection.kind === "preset" ? presetRange(selection.days) : selection.range;
+}
+
+function selectionKey(selection: Selection): string {
+  return selection.kind === "preset"
+    ? `preset:${selection.days}`
+    : `custom:${selection.range.start}:${selection.range.end}`;
+}
+
+function describeRange(range: DateRange, endsToday: boolean): string {
+  const length = rangeLength(range);
+  if (endsToday && length === 1) return "Today";
+  if (endsToday) return `Last ${length} days (${formatRangeLabel(range)})`;
+  return formatRangeLabel(range);
 }
 
 type Metric = {
@@ -146,6 +173,8 @@ function Chart({
   );
   const average = days.length ? total / days.length : 0;
   const labelEvery = Math.max(1, Math.ceil(days.length / 4));
+  // Past a few months the gaps between bars would eat the bars themselves.
+  const dense = days.length > 120;
 
   return (
     <div className={styles.chart}>
@@ -178,7 +207,7 @@ function Chart({
           ))}
         </div>
 
-        <div className={styles.bars}>
+        <div className={`${styles.bars} ${dense ? styles.dense : ""}`}>
           {days.map((day, dayIndex) => (
             <div key={day.day} className={styles.slot}>
               <div className={styles.tip}>
@@ -235,13 +264,181 @@ function Chart({
         ) : null}
       </div>
 
-      <div className={styles.xAxis} aria-hidden="true">
+      <div className={`${styles.xAxis} ${dense ? styles.dense : ""}`} aria-hidden="true">
         {days.map((day, index) => (
           <span key={day.day} className={styles.xTick}>
             {index % labelEvery === 0 ? formatDayLabel(day.day) : ""}
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function Ranked({
+  rows,
+  total,
+  empty,
+}: {
+  rows: { name: string; value: number }[];
+  total: number;
+  empty: string;
+}) {
+  if (rows.length === 0) return <p className={styles.empty}>{empty}</p>;
+  const top = rows[0]?.value || 1;
+  return (
+    <ol className={styles.ranks}>
+      {rows.map((row, index) => (
+        <li key={row.name} className={styles.rank}>
+          <span className={styles.rankIndex}>{index + 1}</span>
+          <span className={styles.rankName}>{row.name}</span>
+          <span className={styles.rankTrack}>
+            <span className={styles.rankFill} style={{ width: `${(row.value / top) * 100}%` }} />
+          </span>
+          <span className={styles.rankValue}>{number.format(row.value)}</span>
+          <span className={styles.rankShare}>
+            {Math.round((row.value / (total || 1)) * 100)}%
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+type PickerMode = "day" | "range";
+
+function RangePicker({
+  initial,
+  onApply,
+  onClose,
+}: {
+  initial: DateRange;
+  onApply: (range: DateRange) => void;
+  onClose: () => void;
+}) {
+  const today = todayKey();
+  const [mode, setMode] = useState<PickerMode>(initial.start === initial.end ? "day" : "range");
+  const [start, setStart] = useState(initial.start);
+  const [end, setEnd] = useState(initial.end);
+  const [error, setError] = useState<string | null>(null);
+
+  const thisMonthStart = `${today.slice(0, 8)}01`;
+  const lastMonthEnd = addDays(thisMonthStart, -1);
+  const quickPicks: { label: string; range: DateRange }[] = [
+    { label: "Today", range: { start: today, end: today } },
+    { label: "Yesterday", range: { start: addDays(today, -1), end: addDays(today, -1) } },
+    { label: "This month", range: { start: thisMonthStart, end: today } },
+    { label: "Last month", range: { start: `${lastMonthEnd.slice(0, 8)}01`, end: lastMonthEnd } },
+  ];
+
+  const submit = (range: DateRange) => {
+    const problem = validateRange(range);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    onApply(range);
+  };
+
+  return (
+    <div className={styles.popover} role="dialog" aria-label="Choose dates">
+      <div className={styles.modeToggle} role="group" aria-label="Date mode">
+        {(["day", "range"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            className={`${styles.mode} ${mode === option ? styles.modeActive : ""}`}
+            onClick={() => {
+              setMode(option);
+              setError(null);
+            }}
+            aria-pressed={mode === option}
+          >
+            {option === "day" ? "Single day" : "Date range"}
+          </button>
+        ))}
+      </div>
+
+      <form
+        className={styles.fields}
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit(mode === "day" ? { start, end: start } : { start, end });
+        }}
+      >
+        {mode === "day" ? (
+          <label className={styles.field}>
+            <span>Day</span>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={start}
+              max={today}
+              onChange={(event) => {
+                setStart(event.target.value);
+                setError(null);
+              }}
+              required
+            />
+          </label>
+        ) : (
+          <div className={styles.fieldRow}>
+            <label className={styles.field}>
+              <span>From</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={start}
+                max={end || today}
+                onChange={(event) => {
+                  setStart(event.target.value);
+                  setError(null);
+                }}
+                required
+              />
+            </label>
+            <label className={styles.field}>
+              <span>To</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={end}
+                min={start}
+                max={today}
+                onChange={(event) => {
+                  setEnd(event.target.value);
+                  setError(null);
+                }}
+                required
+              />
+            </label>
+          </div>
+        )}
+
+        <div className={styles.quickPicks}>
+          {quickPicks.map((pick) => (
+            <button
+              key={pick.label}
+              type="button"
+              className={styles.quickPick}
+              onClick={() => submit(pick.range)}
+            >
+              {pick.label}
+            </button>
+          ))}
+        </div>
+
+        {error ? <p className={styles.popoverError}>{error}</p> : null}
+
+        <div className={styles.popoverActions}>
+          <button type="button" className={styles.ghostButton} onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className={styles.applyButton}>
+            Apply
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -293,10 +490,26 @@ function RefreshIcon() {
   );
 }
 
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15" rx="3" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M3.5 10h17M8 3v4M16 3v4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function AnalyticsDashboard() {
   const { user, loading: authLoading } = useAuth();
   const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "light" as Theme);
-  const [range, setRange] = useState<RangeDays>(30);
+  const [selection, setSelection] = useState<Selection>({ kind: "preset", days: 30 });
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const [attempt, setAttempt] = useState(0);
   const [adminCheck, setAdminCheck] = useState<{ uid: string; allowed: boolean } | null>(null);
   const [snapshot, setSnapshot] = useState<{ summary: AnalyticsSummary; at: number } | null>(null);
@@ -305,7 +518,7 @@ export default function AnalyticsDashboard() {
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [failedKey, setFailedKey] = useState<string | null>(null);
 
-  const requestKey = `${range}:${attempt}`;
+  const requestKey = `${selectionKey(selection)}:${attempt}`;
   const uid = user?.uid;
 
   const isAdmin: boolean | null = !uid
@@ -343,7 +556,7 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     if (isAdmin !== true) return;
     let cancelled = false;
-    fetchAnalyticsSummary(range)
+    fetchAnalyticsSummary(resolveRange(selection))
       .then((next) => {
         if (cancelled) return;
         setSnapshot({ summary: next, at: Date.now() });
@@ -356,19 +569,43 @@ export default function AnalyticsDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, range, requestKey]);
+  }, [isAdmin, requestKey, selection]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPickerOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [pickerOpen]);
 
   const summary = snapshot?.summary ?? null;
   const failed = failedKey === requestKey;
   const loading = isAdmin === true && !failed && loadedKey !== requestKey;
-  const priorLabel = `previous ${range} days`;
+  const shownLength = summary ? rangeLength(summary.range) : 0;
+  const priorLabel = shownLength === 1 ? "previous day" : `previous ${shownLength} days`;
+  const priorShort = shownLength === 1 ? "Previous day" : `Previous ${shownLength}d`;
 
   const metrics = useMemo<Metric[]>(() => {
     if (!summary) return [];
-    const { days, totals, previous, retention, previousRetention } = summary;
-    const today = days[days.length - 1];
-    const yesterday = days[days.length - 2];
+    const { days, previousDays, totals, previous, retention, previousRetention, range, endsToday } =
+      summary;
+    const length = rangeLength(range);
+    const lastDay = days[days.length - 1];
+    const dayBefore =
+      days.length > 1 ? days[days.length - 2] : previousDays[previousDays.length - 1];
     const cohortWindow = `${formatDayLabel(retention.start)}–${formatDayLabel(retention.end)}`;
+    const uniqueKnown = totals.uniqueUsers !== null;
 
     return [
       {
@@ -376,8 +613,8 @@ export default function AnalyticsDashboard() {
         label: "Total users",
         value: summary.totalUsers,
         previous: summary.totalUsers - totals.newUsers,
-        note: "installs ever",
-        comparison: `before this ${range}-day window`,
+        note: endsToday ? "installs ever" : `installs by ${formatDayLabel(range.end)}`,
+        comparison: `before this ${length}-day window`,
         featured: true,
       },
       {
@@ -385,7 +622,11 @@ export default function AnalyticsDashboard() {
         label: "Active users",
         value: totals.uniqueUsers ?? totals.userDays,
         previous: null,
-        note: "unique devices",
+        note: uniqueKnown ? "unique devices" : "user-days",
+        hint: uniqueKnown
+          ? undefined
+          : "Unique devices can only be counted for ranges that end today, so this is the " +
+            "sum of each day's active users instead.",
         comparison: priorLabel,
         featured: true,
         series: days.map((day) => day.activeUsers),
@@ -400,11 +641,11 @@ export default function AnalyticsDashboard() {
       },
       {
         key: "today",
-        label: "Opened today",
-        value: today?.activeUsers ?? 0,
-        previous: yesterday?.activeUsers ?? null,
-        note: "so far",
-        comparison: "yesterday",
+        label: endsToday ? "Opened today" : `Opened ${formatDayLabel(range.end)}`,
+        value: lastDay?.activeUsers ?? 0,
+        previous: dayBefore?.activeUsers ?? null,
+        note: endsToday ? "so far" : "last day in range",
+        comparison: endsToday ? "yesterday" : "day before",
       },
       {
         key: "retention",
@@ -473,8 +714,41 @@ export default function AnalyticsDashboard() {
           day.activeUsers ? day.foregroundSeconds / day.activeUsers : 0,
         ),
       },
+      {
+        key: "pushes",
+        label: "Push notifications",
+        value: totals.pushesSent,
+        previous: previous.pushesSent,
+        note: "sent to devices",
+        hint:
+          "Notifications Expo accepted for delivery to Apple: saved listing alerts, " +
+          "come-back nudges, down payment reminders, and viewing updates.",
+        comparison: priorLabel,
+        wide: true,
+        series: days.map((day) => day.pushesSent),
+      },
+      {
+        key: "propertyShares",
+        label: "Property shares",
+        value: totals.propertyShares,
+        previous: previous.propertyShares,
+        note: "in range",
+        hint: "Listings shared from the app's share sheet, including sharing with an agent.",
+        comparison: priorLabel,
+        series: days.map((day) => day.propertyShares),
+      },
+      {
+        key: "profileShares",
+        label: "Agent profile shares",
+        value: totals.profileShares,
+        previous: previous.profileShares,
+        note: "in range",
+        hint: "Agent pages shared from the app's share sheet.",
+        comparison: priorLabel,
+        series: days.map((day) => day.profileShares),
+      },
     ];
-  }, [priorLabel, range, summary]);
+  }, [priorLabel, summary]);
 
   const shellProps = { className: styles.shell, "data-theme": theme };
 
@@ -522,13 +796,13 @@ export default function AnalyticsDashboard() {
 
   const days = summary?.days ?? [];
   const previousDays = summary?.previousDays ?? [];
-  const totalScreenViews = summary?.totals.screenViews || 1;
   const topScreens = summary?.topScreens.slice(0, 10) ?? [];
-  const topScreenViews = topScreens[0]?.views || 1;
+  const pushKinds = summary?.pushKinds ?? [];
   const busiest = days.reduce<DayStats | null>(
     (best, day) => (!best || day.activeUsers > best.activeUsers ? day : best),
     null,
   );
+  const customActive = selection.kind === "custom";
 
   return (
     <div {...shellProps}>
@@ -541,7 +815,9 @@ export default function AnalyticsDashboard() {
             </p>
             <h1>App analytics</h1>
             <p className={styles.lead}>
-              Last {range} days against the {priorLabel}, bucketed by Atlantic day.
+              {summary
+                ? `${describeRange(summary.range, summary.endsToday)} against the ${priorLabel}, bucketed by Atlantic day.`
+                : "Loading…"}
               {snapshot ? (
                 <span className={styles.stamp}>
                   Updated{" "}
@@ -555,18 +831,50 @@ export default function AnalyticsDashboard() {
           </div>
 
           <div className={styles.controls}>
-            <div className={styles.ranges} role="group" aria-label="Date range">
-              {RANGE_OPTIONS.map((option) => (
+            <div className={styles.pickerWrap} ref={pickerRef}>
+              <div className={styles.ranges} role="group" aria-label="Date range">
+                {PRESET_DAYS.map((option) => {
+                  const active = selection.kind === "preset" && selection.days === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`${styles.range} ${active ? styles.rangeActive : ""}`}
+                      onClick={() => {
+                        setSelection({ kind: "preset", days: option });
+                        setPickerOpen(false);
+                      }}
+                      aria-pressed={active}
+                    >
+                      {option}d
+                    </button>
+                  );
+                })}
                 <button
-                  key={option}
                   type="button"
-                  className={`${styles.range} ${option === range ? styles.rangeActive : ""}`}
-                  onClick={() => setRange(option)}
-                  aria-pressed={option === range}
+                  className={`${styles.range} ${styles.rangeCustom} ${
+                    customActive ? styles.rangeActive : ""
+                  }`}
+                  onClick={() => setPickerOpen((open) => !open)}
+                  aria-pressed={customActive}
+                  aria-expanded={pickerOpen}
+                  title={customActive ? formatRangeLabel(selection.range) : "Pick dates"}
                 >
-                  {option}d
+                  <CalendarIcon />
+                  <span>{customActive ? formatRangeLabel(selection.range) : "Custom"}</span>
                 </button>
-              ))}
+              </div>
+
+              {pickerOpen ? (
+                <RangePicker
+                  initial={resolveRange(selection)}
+                  onApply={(range) => {
+                    setSelection({ kind: "custom", range });
+                    setPickerOpen(false);
+                  }}
+                  onClose={() => setPickerOpen(false)}
+                />
+              ) : null}
             </div>
 
             <button
@@ -606,7 +914,7 @@ export default function AnalyticsDashboard() {
 
         {loading && !summary ? (
           <div className={styles.skeleton}>
-            {Array.from({ length: 9 }).map((_, index) => (
+            {Array.from({ length: 12 }).map((_, index) => (
               <div key={index} className={styles.skeletonCard} />
             ))}
           </div>
@@ -695,7 +1003,7 @@ export default function AnalyticsDashboard() {
                 days={days}
                 series={[{ label: "Users", values: days.map((day) => day.activeUsers) }]}
                 comparison={{
-                  label: `Previous ${range}d`,
+                  label: priorShort,
                   values: previousDays.map((day) => day.activeUsers),
                 }}
               />
@@ -713,10 +1021,59 @@ export default function AnalyticsDashboard() {
                   { label: "Searches", values: days.map((day) => day.mapSearches) },
                 ]}
                 comparison={{
-                  label: `Previous ${range}d saves`,
+                  label: `${priorShort} saves`,
                   values: previousDays.map((day) => day.propertySaves),
                 }}
               />
+            </section>
+
+            <section className={styles.panel}>
+              <div className={styles.panelHead}>
+                <h2>Shares</h2>
+                <p className={styles.panelNote}>
+                  {number.format(summary.totals.propertyShares)} listings and{" "}
+                  {number.format(summary.totals.profileShares)} agent pages shared
+                </p>
+              </div>
+              <Chart
+                days={days}
+                series={[
+                  { label: "Properties", values: days.map((day) => day.propertyShares) },
+                  { label: "Agent profiles", values: days.map((day) => day.profileShares) },
+                ]}
+                comparison={{
+                  label: `${priorShort} properties`,
+                  values: previousDays.map((day) => day.propertyShares),
+                }}
+              />
+            </section>
+
+            <section className={styles.panel}>
+              <div className={styles.panelHead}>
+                <h2>Push notifications</h2>
+                <p className={styles.panelNote}>
+                  {number.format(summary.totals.pushesSent)} sent across {pushKinds.length}{" "}
+                  {pushKinds.length === 1 ? "type" : "types"}
+                </p>
+              </div>
+              <Chart
+                days={days}
+                series={[{ label: "Sent", values: days.map((day) => day.pushesSent) }]}
+                comparison={{
+                  label: priorShort,
+                  values: previousDays.map((day) => day.pushesSent),
+                }}
+              />
+              <div className={styles.panelSplit}>
+                <Ranked
+                  rows={pushKinds.map((row) => ({
+                    name: PUSH_KIND_LABELS[row.kind] ?? row.kind,
+                    value: row.count,
+                  }))}
+                  total={summary.totals.pushesSent}
+                  empty="No push notifications sent in this range."
+                />
+              </div>
             </section>
 
             <section className={styles.panel}>
@@ -727,28 +1084,11 @@ export default function AnalyticsDashboard() {
                   {summary.topScreens.length} screens
                 </p>
               </div>
-              {topScreens.length === 0 ? (
-                <p className={styles.empty}>No screen views recorded yet.</p>
-              ) : (
-                <ol className={styles.ranks}>
-                  {topScreens.map((row, index) => (
-                    <li key={row.screen} className={styles.rank}>
-                      <span className={styles.rankIndex}>{index + 1}</span>
-                      <span className={styles.rankName}>{row.screen}</span>
-                      <span className={styles.rankTrack}>
-                        <span
-                          className={styles.rankFill}
-                          style={{ width: `${(row.views / topScreenViews) * 100}%` }}
-                        />
-                      </span>
-                      <span className={styles.rankValue}>{number.format(row.views)}</span>
-                      <span className={styles.rankShare}>
-                        {Math.round((row.views / totalScreenViews) * 100)}%
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
+              <Ranked
+                rows={topScreens.map((row) => ({ name: row.screen, value: row.views }))}
+                total={summary.totals.screenViews}
+                empty="No screen views recorded yet."
+              />
             </section>
           </div>
         ) : null}

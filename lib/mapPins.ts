@@ -36,6 +36,18 @@ export function pinTone(items: MapProperty[]): PinTone {
   return "sale";
 }
 
+/** Compact pin price, matching the API's `format_price_label`: $425k or $1.2M. */
+export function compactPriceLabel(price: number | null): string | null {
+  if (price === null || !Number.isFinite(price)) return null;
+  if (price >= 1_000_000) {
+    const millions = price / 1_000_000;
+    if (millions >= 10) return `$${Math.round(millions)}M`;
+    return `$${millions.toFixed(1)}M`.replace(".0M", "M");
+  }
+  if (price >= 1_000) return `$${Math.round(price / 1000)}k`;
+  return `$${Math.round(price)}`;
+}
+
 export function pinLabel(property: MapProperty): string {
   if (property.pin === "sold") return property.priceLabel || "Sold";
   if (property.pin === "pending") return property.priceLabel || "Pending";

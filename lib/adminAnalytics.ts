@@ -17,7 +17,8 @@ import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 // out or non-admin visitor gets a permission error rather than empty data.
 //
 // Every load covers twice the selected range: the window on screen and the one
-// immediately before it, so each number can be shown against its own past.
+// of the same length immediately before it, so each number can be shown against
+// its own past.
 
 export type DayStats = {
   day: string;
@@ -26,15 +27,19 @@ export type DayStats = {
   screenViews: number;
   propertySaves: number;
   mapSearches: number;
+  propertyShares: number;
+  profileShares: number;
+  pushesSent: number;
   foregroundSeconds: number;
   activeUsers: number;
   screens: Record<string, number>;
+  pushes: Record<string, number>;
 };
 
 export type PeriodTotals = {
-  /** Distinct devices that opened the app in the window. Only exact for the
-   * current window: `lastSeen` holds one timestamp per device, so a device
-   * active in both windows counts only against the newer one. */
+  /** Distinct devices that opened the app in the window. Only known when the
+   * window ends today: `lastSeen` holds one timestamp per device, so a window
+   * in the past cannot be counted. */
   uniqueUsers: number | null;
   /** Active users summed across days, i.e. user-days. Exact for any window. */
   userDays: number;
@@ -44,6 +49,9 @@ export type PeriodTotals = {
   screenViews: number;
   propertySaves: number;
   mapSearches: number;
+  propertyShares: number;
+  profileShares: number;
+  pushesSent: number;
   foregroundSeconds: number;
   secondsPerUserDay: number;
 };
@@ -58,15 +66,25 @@ export type Retention = {
   end: string;
 };
 
+/** Inclusive Atlantic day keys, YYYY-MM-DD. */
+export type DateRange = {
+  start: string;
+  end: string;
+};
+
 export type AnalyticsSummary = {
+  range: DateRange;
+  endsToday: boolean;
   days: DayStats[];
   previousDays: DayStats[];
   totals: PeriodTotals;
   previous: PeriodTotals;
   retention: Retention;
   previousRetention: Retention;
+  /** Installs up to the end of the range. */
   totalUsers: number;
   topScreens: { screen: string; views: number }[];
+  pushKinds: { kind: string; count: number }[];
 };
 
 /** How long after installing someone has to reappear to count as retained. */
@@ -74,9 +92,23 @@ export const RETENTION_DAYS = 7;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const RANGE_OPTIONS = [7, 30, 90] as const;
+export const PRESET_DAYS = [7, 30, 90] as const;
 
-export type RangeDays = (typeof RANGE_OPTIONS)[number];
+export type PresetDays = (typeof PRESET_DAYS)[number];
+
+/** Each day in a range is its own count query, so very long ranges are capped. */
+export const MAX_RANGE_DAYS = 366;
+
+const COUNT_CONCURRENCY = 25;
+
+export const PUSH_KIND_LABELS: Record<string, string> = {
+  listing: "Saved listing alerts",
+  inactivity: "Come-back nudges",
+  downpayment: "Down payment reminders",
+  viewing: "Viewing updates",
+  reminder: "Viewing reminders",
+  client: "Client requests",
+};
 
 const ATLANTIC_DATE = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Halifax",
@@ -85,14 +117,63 @@ const ATLANTIC_DATE = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-/** Day keys, oldest first, in the America/Halifax dates the API buckets by. */
-export function rangeDays(days: number, today = new Date()): string[] {
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Today's Atlantic date, the day the API is currently writing into. */
+export function todayKey(now = new Date()): string {
+  return ATLANTIC_DATE.format(now);
+}
+
+export function isDayKey(value: string): boolean {
+  if (!DAY_KEY.test(value)) return false;
+  const [year, month, date] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, date));
+  return parsed.toISOString().slice(0, 10) === value;
+}
+
+/** Calendar arithmetic on a day key; no time zone is involved. */
+export function addDays(day: string, delta: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, date + delta)).toISOString().slice(0, 10);
+}
+
+export function rangeLength(range: DateRange): number {
+  const [sy, sm, sd] = range.start.split("-").map(Number);
+  const [ey, em, ed] = range.end.split("-").map(Number);
+  return Math.round((Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / DAY_MS) + 1;
+}
+
+/** Day keys, oldest first. */
+export function daysIn(range: DateRange): string[] {
+  const length = rangeLength(range);
   const keys: string[] = [];
-  for (let offset = days - 1; offset >= 0; offset -= 1) {
-    const moment = new Date(today.getTime() - offset * 24 * 60 * 60 * 1000);
-    keys.push(ATLANTIC_DATE.format(moment));
+  for (let offset = 0; offset < length; offset += 1) {
+    keys.push(addDays(range.start, offset));
   }
   return keys;
+}
+
+/** The last `days` days, ending today. */
+export function presetRange(days: number, now = new Date()): DateRange {
+  const end = todayKey(now);
+  return { start: addDays(end, -(days - 1)), end };
+}
+
+/** The window of the same length that ends the day before `range` starts. */
+export function previousRange(range: DateRange): DateRange {
+  const length = rangeLength(range);
+  return { start: addDays(range.start, -length), end: addDays(range.start, -1) };
+}
+
+/** Why a picked range cannot be loaded, or null when it can. */
+export function validateRange(range: DateRange, now = new Date()): string | null {
+  if (!isDayKey(range.start) || !isDayKey(range.end)) return "Pick a valid date.";
+  if (range.start > range.end) return "The start date must be on or before the end date.";
+  if (range.end > todayKey(now)) return "Dates cannot be in the future.";
+  if (rangeLength(range) > MAX_RANGE_DAYS) {
+    return `Ranges are limited to ${MAX_RANGE_DAYS} days.`;
+  }
+  return null;
 }
 
 /** Halifax is UTC-4 in winter and UTC-3 in summer, so try both and keep the
@@ -111,9 +192,13 @@ function emptyDay(day: string): DayStats {
     screenViews: 0,
     propertySaves: 0,
     mapSearches: 0,
+    propertyShares: 0,
+    profileShares: 0,
+    pushesSent: 0,
     foregroundSeconds: 0,
     activeUsers: 0,
     screens: {},
+    pushes: {},
   };
 }
 
@@ -128,14 +213,20 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
-function toScreens(value: unknown): Record<string, number> {
+function toCounts(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object") return {};
-  const screens: Record<string, number> = {};
+  const counts: Record<string, number> = {};
   for (const [name, count] of Object.entries(value as Record<string, unknown>)) {
-    const views = toNumber(count);
-    if (views) screens[name] = views;
+    const total = toNumber(count);
+    if (total) counts[name] = total;
   }
-  return screens;
+  return counts;
+}
+
+function addCounts(into: Map<string, number>, counts: Record<string, number>) {
+  for (const [name, count] of Object.entries(counts)) {
+    into.set(name, (into.get(name) ?? 0) + count);
+  }
 }
 
 export async function isAdminUser(): Promise<boolean> {
@@ -153,19 +244,32 @@ async function countActiveUsers(day: string): Promise<number> {
   return snapshot.data().count;
 }
 
-/** One-week retention for the two most recent *mature* cohorts.
+async function inBatches<T, R>(items: T[], size: number, task: (item: T) => Promise<R>) {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += size) {
+    results.push(...(await Promise.all(items.slice(index, index + size).map(task))));
+  }
+  return results;
+}
+
+/** One-week retention for the selected range and the one before it.
  *
  * A cohort only counts once every install in it has had a full week to come
- * back, so both windows end `RETENTION_DAYS` ago rather than today. Firestore
- * cannot compare two fields in a query, so the `lastSeen >= firstSeen + 7d`
- * test happens here over the cohort documents.
+ * back, so a window that reaches into the last `RETENTION_DAYS` days is slid
+ * back until it no longer does. Firestore cannot compare two fields in a
+ * query, so the `lastSeen >= firstSeen + 7d` test happens here over the cohort
+ * documents.
  */
-async function fetchRetention(days: number, now: Date): Promise<[Retention, Retention]> {
+async function fetchRetention(range: DateRange, now: Date): Promise<[Retention, Retention]> {
   const db = getFirebaseDb();
-  const span = days * DAY_MS;
-  const matureEnd = new Date(now.getTime() - RETENTION_DAYS * DAY_MS);
+  const span = rangeLength(range) * DAY_MS;
+  const matureLimit = now.getTime() - RETENTION_DAYS * DAY_MS;
+  const rangeEnd = atlanticMidnight(addDays(range.end, 1)).getTime();
+  const matureEnd = new Date(Math.min(rangeEnd, matureLimit));
   const currentStart = new Date(matureEnd.getTime() - span);
   const priorStart = new Date(currentStart.getTime() - span);
+  // The window ends are exclusive, so the labels show the moment just before.
+  const lastIn = (end: Date) => ATLANTIC_DATE.format(new Date(end.getTime() - 1));
 
   const installs = await getDocs(
     query(
@@ -181,14 +285,14 @@ async function fetchRetention(days: number, now: Date): Promise<[Retention, Rete
     retained: 0,
     rate: null,
     start: ATLANTIC_DATE.format(currentStart),
-    end: ATLANTIC_DATE.format(matureEnd),
+    end: lastIn(matureEnd),
   };
   const prior: Retention = {
     cohort: 0,
     retained: 0,
     rate: null,
     start: ATLANTIC_DATE.format(priorStart),
-    end: ATLANTIC_DATE.format(currentStart),
+    end: lastIn(currentStart),
   };
 
   for (const snapshot of installs.docs) {
@@ -221,17 +325,22 @@ function totalsOf(days: DayStats[], uniqueUsers: number | null): PeriodTotals {
     screenViews: sumBy(days, "screenViews"),
     propertySaves: sumBy(days, "propertySaves"),
     mapSearches: sumBy(days, "mapSearches"),
+    propertyShares: sumBy(days, "propertyShares"),
+    profileShares: sumBy(days, "profileShares"),
+    pushesSent: sumBy(days, "pushesSent"),
     foregroundSeconds,
     secondsPerUserDay: userDays ? foregroundSeconds / userDays : 0,
   };
 }
 
-export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsSummary> {
+export async function fetchAnalyticsSummary(range: DateRange): Promise<AnalyticsSummary> {
   const db = getFirebaseDb();
-  const keys = rangeDays(days * 2);
-  const previousKeys = keys.slice(0, days);
-  const currentKeys = keys.slice(days);
+  const now = new Date();
+  const currentKeys = daysIn(range);
+  const previousKeys = daysIn(previousRange(range));
+  const keys = [...previousKeys, ...currentKeys];
   const byDay = new Map(keys.map((day) => [day, emptyDay(day)]));
+  const endsToday = range.end === todayKey(now);
 
   // One ranged read over document ids covers both windows.
   const counters = await getDocs(
@@ -252,43 +361,56 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
     existing.screenViews = toNumber(data.screenViews);
     existing.propertySaves = toNumber(data.propertySaves);
     existing.mapSearches = toNumber(data.mapSearches);
+    existing.propertyShares = toNumber(data.propertyShares);
+    existing.profileShares = toNumber(data.profileShares);
+    existing.pushesSent = toNumber(data.pushesSent);
     existing.foregroundSeconds = toNumber(data.foregroundSeconds);
-    existing.screens = toScreens(data.screens);
+    existing.screens = toCounts(data.screens);
+    existing.pushes = toCounts(data.pushes);
   }
 
   // Unique devices per day live in a subcollection, so each day is its own
   // aggregation query. Only days that saw a session can have one.
   const withSessions = keys.filter((day) => (byDay.get(day)?.sessions ?? 0) > 0);
-  const activeCounts = await Promise.all(
-    withSessions.map(async (day) => [day, await countActiveUsers(day)] as const),
-  );
+  const activeCounts = await inBatches(withSessions, COUNT_CONCURRENCY, async (day) => {
+    return [day, await countActiveUsers(day)] as const;
+  });
   for (const [day, count] of activeCounts) {
     const existing = byDay.get(day);
     if (existing) existing.activeUsers = count;
   }
 
   const [totalUsers, uniqueUsers, [retention, previousRetention]] = await Promise.all([
-    getCountFromServer(collection(db, "analytics_users")).then((snap) => snap.data().count),
     getCountFromServer(
       query(
         collection(db, "analytics_users"),
-        where("lastSeen", ">=", atlanticMidnight(currentKeys[0])),
+        where("firstSeen", "<", atlanticMidnight(addDays(range.end, 1))),
       ),
     ).then((snap) => snap.data().count),
-    fetchRetention(days, new Date()),
+    endsToday
+      ? getCountFromServer(
+          query(
+            collection(db, "analytics_users"),
+            where("lastSeen", ">=", atlanticMidnight(range.start)),
+          ),
+        ).then((snap) => snap.data().count)
+      : Promise.resolve(null),
+    fetchRetention(range, now),
   ]);
 
   const current = currentKeys.map((day) => byDay.get(day) ?? emptyDay(day));
   const earlier = previousKeys.map((day) => byDay.get(day) ?? emptyDay(day));
 
   const screenTotals = new Map<string, number>();
+  const pushTotals = new Map<string, number>();
   for (const day of current) {
-    for (const [screen, views] of Object.entries(day.screens)) {
-      screenTotals.set(screen, (screenTotals.get(screen) ?? 0) + views);
-    }
+    addCounts(screenTotals, day.screens);
+    addCounts(pushTotals, day.pushes);
   }
 
   return {
+    range,
+    endsToday,
     days: current,
     previousDays: earlier,
     totals: totalsOf(current, uniqueUsers),
@@ -299,6 +421,9 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
     topScreens: Array.from(screenTotals.entries())
       .map(([screen, views]) => ({ screen, views }))
       .sort((a, b) => b.views - a.views),
+    pushKinds: Array.from(pushTotals.entries())
+      .map(([kind, count]) => ({ kind, count }))
+      .sort((a, b) => b.count - a.count),
   };
 }
 
@@ -354,4 +479,24 @@ export function formatDayLabel(day: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+export function formatDayLong(day: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  if (!year || !month || !date) return day;
+  return new Date(Date.UTC(year, month - 1, date)).toLocaleDateString("en-CA", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** "Sep 22, 2026", "Sep 1 – 22, 2026" style labels, keeping the year only where
+ * it is needed to be unambiguous. */
+export function formatRangeLabel(range: DateRange): string {
+  if (range.start === range.end) return formatDayLong(range.start);
+  const sameYear = range.start.slice(0, 4) === range.end.slice(0, 4);
+  const start = sameYear ? formatDayLabel(range.start) : formatDayLong(range.start);
+  return `${start} – ${formatDayLong(range.end)}`;
 }

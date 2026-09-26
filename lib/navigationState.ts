@@ -14,6 +14,8 @@ export type MapViewParams = {
   lat: number;
   zoom: number;
   property?: string | null;
+  /** Show only `property` on the map, hiding every other listing. */
+  only?: boolean;
 };
 
 export function savePropertiesListState(state: PropertiesListState) {
@@ -64,8 +66,8 @@ export function parseMapViewParams(searchParams: URLSearchParams): MapViewParams
     return null;
   }
 
-  const property = searchParams.get("property");
-  return { lng, lat, zoom, property: property || null };
+  const property = searchParams.get("property") || null;
+  return { lng, lat, zoom, property, only: Boolean(property) && searchParams.get("only") === "1" };
 }
 
 export function buildMapHref(params: MapViewParams) {
@@ -76,6 +78,7 @@ export function buildMapHref(params: MapViewParams) {
   });
   if (params.property) {
     search.set("property", params.property);
+    if (params.only) search.set("only", "1");
   }
   return `/map?${search.toString()}`;
 }
