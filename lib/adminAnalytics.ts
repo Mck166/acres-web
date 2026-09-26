@@ -48,14 +48,31 @@ export type PeriodTotals = {
   secondsPerUserDay: number;
 };
 
+export type Retention = {
+  /** Installs in the window, counted only once they are old enough to judge. */
+  cohort: number;
+  retained: number;
+  /** Percent of the cohort that came back, or null when the cohort is empty. */
+  rate: number | null;
+  start: string;
+  end: string;
+};
+
 export type AnalyticsSummary = {
   days: DayStats[];
   previousDays: DayStats[];
   totals: PeriodTotals;
   previous: PeriodTotals;
+  retention: Retention;
+  previousRetention: Retention;
   totalUsers: number;
   topScreens: { screen: string; views: number }[];
 };
+
+/** How long after installing someone has to reappear to count as retained. */
+export const RETENTION_DAYS = 7;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const RANGE_OPTIONS = [7, 30, 90] as const;
 
@@ -104,6 +121,13 @@ function toNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function toDate(value: unknown): Date | null {
+  if (value instanceof Date) return value;
+  const timestamp = value as { toDate?: () => Date } | null;
+  if (timestamp && typeof timestamp.toDate === "function") return timestamp.toDate();
+  return null;
+}
+
 function toScreens(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object") return {};
   const screens: Record<string, number> = {};
@@ -127,6 +151,62 @@ async function countActiveUsers(day: string): Promise<number> {
     collection(doc(db, "analytics_daily", day), "active"),
   );
   return snapshot.data().count;
+}
+
+/** One-week retention for the two most recent *mature* cohorts.
+ *
+ * A cohort only counts once every install in it has had a full week to come
+ * back, so both windows end `RETENTION_DAYS` ago rather than today. Firestore
+ * cannot compare two fields in a query, so the `lastSeen >= firstSeen + 7d`
+ * test happens here over the cohort documents.
+ */
+async function fetchRetention(days: number, now: Date): Promise<[Retention, Retention]> {
+  const db = getFirebaseDb();
+  const span = days * DAY_MS;
+  const matureEnd = new Date(now.getTime() - RETENTION_DAYS * DAY_MS);
+  const currentStart = new Date(matureEnd.getTime() - span);
+  const priorStart = new Date(currentStart.getTime() - span);
+
+  const installs = await getDocs(
+    query(
+      collection(db, "analytics_users"),
+      where("firstSeen", ">=", priorStart),
+      where("firstSeen", "<", matureEnd),
+      orderBy("firstSeen"),
+    ),
+  );
+
+  const current: Retention = {
+    cohort: 0,
+    retained: 0,
+    rate: null,
+    start: ATLANTIC_DATE.format(currentStart),
+    end: ATLANTIC_DATE.format(matureEnd),
+  };
+  const prior: Retention = {
+    cohort: 0,
+    retained: 0,
+    rate: null,
+    start: ATLANTIC_DATE.format(priorStart),
+    end: ATLANTIC_DATE.format(currentStart),
+  };
+
+  for (const snapshot of installs.docs) {
+    const data = snapshot.data();
+    const firstSeen = toDate(data.firstSeen);
+    if (!firstSeen) continue;
+    const lastSeen = toDate(data.lastSeen);
+    const bucket = firstSeen >= currentStart ? current : prior;
+    bucket.cohort += 1;
+    if (lastSeen && lastSeen.getTime() - firstSeen.getTime() >= RETENTION_DAYS * DAY_MS) {
+      bucket.retained += 1;
+    }
+  }
+
+  for (const bucket of [current, prior]) {
+    bucket.rate = bucket.cohort ? (bucket.retained / bucket.cohort) * 100 : null;
+  }
+  return [current, prior];
 }
 
 function totalsOf(days: DayStats[], uniqueUsers: number | null): PeriodTotals {
@@ -187,7 +267,7 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
     if (existing) existing.activeUsers = count;
   }
 
-  const [totalUsers, uniqueUsers] = await Promise.all([
+  const [totalUsers, uniqueUsers, [retention, previousRetention]] = await Promise.all([
     getCountFromServer(collection(db, "analytics_users")).then((snap) => snap.data().count),
     getCountFromServer(
       query(
@@ -195,6 +275,7 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
         where("lastSeen", ">=", atlanticMidnight(currentKeys[0])),
       ),
     ).then((snap) => snap.data().count),
+    fetchRetention(days, new Date()),
   ]);
 
   const current = currentKeys.map((day) => byDay.get(day) ?? emptyDay(day));
@@ -212,6 +293,8 @@ export async function fetchAnalyticsSummary(days: RangeDays): Promise<AnalyticsS
     previousDays: earlier,
     totals: totalsOf(current, uniqueUsers),
     previous: totalsOf(earlier, null),
+    retention,
+    previousRetention,
     totalUsers,
     topScreens: Array.from(screenTotals.entries())
       .map(([screen, views]) => ({ screen, views }))
@@ -239,6 +322,18 @@ export function changeVsPrevious(current: number, previous: number | null): Chan
   return {
     direction: percent > 0 ? "up" : "down",
     label: `${percent > 0 ? "+" : ""}${percent}%`,
+  };
+}
+
+/** Change for metrics that are already percentages, where a relative change
+ * ("40% to 45% is +13%") reads as nonsense. */
+export function pointsVsPrevious(current: number, previous: number | null): Change | null {
+  if (previous === null) return null;
+  const delta = Math.round((current - previous) * 10) / 10;
+  if (delta === 0) return { direction: "flat", label: "Flat" };
+  return {
+    direction: delta > 0 ? "up" : "down",
+    label: `${delta > 0 ? "+" : ""}${delta} pts`,
   };
 }
 

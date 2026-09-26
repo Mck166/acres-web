@@ -15,17 +15,11 @@
   --down: #c0433f;
   --shadow: 0 1px 2px rgba(18, 19, 15, 0.04), 0 12px 28px -18px rgba(18, 19, 15, 0.35);
   --shell-bg: #f4f1ef;
-  --glow: radial-gradient(
-    900px 380px at 12% -8%,
-    rgba(143, 203, 155, 0.22),
-    transparent 70%
-  );
 
   min-height: calc(100vh - 180px);
   padding: 32px 20px 72px;
   color: var(--ink);
   background-color: var(--shell-bg);
-  background-image: var(--glow);
   transition: background-color 220ms ease, color 220ms ease;
 }
 
@@ -44,12 +38,6 @@
   --down: #ff7b76;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 24px 48px -28px rgba(0, 0, 0, 0.9);
   --shell-bg: #0d1412;
-  --glow: radial-gradient(
-      820px 360px at 10% -10%,
-      rgba(127, 209, 164, 0.16),
-      transparent 70%
-    ),
-    radial-gradient(700px 320px at 95% 0%, rgba(120, 160, 220, 0.08), transparent 70%);
 }
 
 .inner {
@@ -308,23 +296,16 @@
   transition: transform 200ms ease, border-color 200ms ease;
 }
 
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
-}
-
 .card:hover {
   transform: translateY(-2px);
   border-color: var(--line-strong);
 }
 
+/* A flat tint rather than a fade, so the featured cards read as a different
+   surface instead of a highlight. */
 .cardFeatured {
-  background:
-    linear-gradient(180deg, var(--accent-soft), transparent 60%),
-    var(--raised);
+  background: color-mix(in srgb, var(--accent) 7%, var(--raised));
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
 }
 
 .cardTop {
@@ -551,17 +532,13 @@
   flex: 1;
   min-height: 3px;
   border-radius: 5px 5px 2px 2px;
-  background: linear-gradient(
-    180deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 78%, transparent)
-  );
+  background: var(--accent);
   animation: grow 520ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
   transition: height 260ms ease;
 }
 
 .barAlt {
-  background: linear-gradient(180deg, var(--alt), color-mix(in srgb, var(--alt) 78%, transparent));
+  background: var(--alt);
 }
 
 /* The previous period rides above the bars as a line so the two are readable
@@ -720,7 +697,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 70%, transparent), var(--accent));
+  background: var(--accent);
   animation: stretch 620ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
 }
 
@@ -748,8 +725,7 @@
   height: 126px;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: linear-gradient(100deg, var(--raised) 30%, var(--accent-soft) 50%, var(--raised) 70%);
-  background-size: 300% 100%;
+  background: var(--raised);
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
@@ -843,12 +819,10 @@
   }
 }
 
+/* The skeletons pulse rather than sweep, now that the sweep was a gradient. */
 @keyframes shimmer {
-  from {
-    background-position: 150% 0;
-  }
-  to {
-    background-position: -150% 0;
+  50% {
+    opacity: 0.45;
   }
 }
 

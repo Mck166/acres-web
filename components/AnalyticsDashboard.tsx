@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
@@ -10,8 +10,10 @@ import {
   formatDayLabel,
   formatDuration,
   isAdminUser,
+  pointsVsPrevious,
   sumBy,
   RANGE_OPTIONS,
+  RETENTION_DAYS,
   type AnalyticsSummary,
   type DayStats,
   type RangeDays,
@@ -60,9 +62,15 @@ function writeTheme(next: Theme) {
 type Metric = {
   key: string;
   label: string;
-  value: number;
+  /** null when the metric cannot be measured yet, shown as a dash. */
+  value: number | null;
   previous: number | null;
   note: string;
+  /** Longer explanation, surfaced as the card's tooltip. */
+  hint?: string;
+  /** Percentages compare in points, since a relative change of a rate reads
+   * as nonsense ("40% to 45%" is not "+13%"). */
+  changeMode?: "points";
   /** What the change chip is measured against, read out in its tooltip. */
   comparison: string;
   /** For metrics whose headline number cannot be compared, the chip falls back
@@ -80,7 +88,6 @@ type Metric = {
 };
 
 function Sparkline({ values }: { values: number[] }) {
-  const gradientId = useId();
   if (values.length < 2) return null;
 
   const peak = Math.max(...values, 1);
@@ -96,15 +103,10 @@ function Sparkline({ values }: { values: number[] }) {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
-      </defs>
       <path
         d={`M0,32 ${points.map((point) => `L${point}`).join(" ")} L100,32 Z`}
-        fill={`url(#${gradientId})`}
+        fill="currentColor"
+        fillOpacity="0.14"
       />
       <polyline
         points={points.join(" ")}
@@ -363,9 +365,10 @@ export default function AnalyticsDashboard() {
 
   const metrics = useMemo<Metric[]>(() => {
     if (!summary) return [];
-    const { days, previousDays, totals, previous } = summary;
+    const { days, totals, previous, retention, previousRetention } = summary;
     const today = days[days.length - 1];
     const yesterday = days[days.length - 2];
+    const cohortWindow = `${formatDayLabel(retention.start)}–${formatDayLabel(retention.end)}`;
 
     return [
       {
@@ -404,6 +407,24 @@ export default function AnalyticsDashboard() {
         comparison: "yesterday",
       },
       {
+        key: "retention",
+        label: "1-week retention",
+        value: retention.rate,
+        previous: previousRetention.rate,
+        note: retention.cohort
+          ? `${number.format(retention.retained)}/${number.format(retention.cohort)} came back`
+          : "no installs old enough yet",
+        hint:
+          `Installs from ${cohortWindow} that opened the app again at least ` +
+          `${RETENTION_DAYS} days after installing. Anyone who installed in the last ` +
+          `${RETENTION_DAYS} days is excluded until they have had a full week.`,
+        comparison: `${formatDayLabel(previousRetention.start)}–${formatDayLabel(
+          previousRetention.end,
+        )} cohort`,
+        changeMode: "points",
+        format: (value: number) => `${decimal.format(value)}%`,
+      },
+      {
         key: "saves",
         label: "Properties saved",
         value: totals.propertySaves,
@@ -431,6 +452,15 @@ export default function AnalyticsDashboard() {
         series: days.map((day) => day.screenViews),
       },
       {
+        key: "installs",
+        label: "New installs",
+        value: totals.newUsers,
+        previous: previous.newUsers,
+        note: "in range",
+        comparison: priorLabel,
+        series: days.map((day) => day.newUsers),
+      },
+      {
         key: "time",
         label: "Time per user",
         value: totals.secondsPerUserDay,
@@ -439,16 +469,9 @@ export default function AnalyticsDashboard() {
         comparison: priorLabel,
         format: formatDuration,
         wide: true,
-      },
-      {
-        key: "installs",
-        label: "New installs",
-        value: totals.newUsers,
-        previous: previous.newUsers,
-        note: "in range",
-        comparison: priorLabel,
-        wide: true,
-        series: previousDays.length ? days.map((day) => day.newUsers) : undefined,
+        series: days.map((day) =>
+          day.activeUsers ? day.foregroundSeconds / day.activeUsers : 0,
+        ),
       },
     ];
   }, [priorLabel, range, summary]);
@@ -583,7 +606,7 @@ export default function AnalyticsDashboard() {
 
         {loading && !summary ? (
           <div className={styles.skeleton}>
-            {Array.from({ length: 8 }).map((_, index) => (
+            {Array.from({ length: 9 }).map((_, index) => (
               <div key={index} className={styles.skeletonCard} />
             ))}
           </div>
@@ -596,15 +619,21 @@ export default function AnalyticsDashboard() {
                 const compare = metric.compare;
                 const current = compare ? compare.value : metric.value;
                 const before = compare ? compare.previous : metric.previous;
-                const change = changeVsPrevious(current, before);
                 const format = metric.format ?? ((value: number) => number.format(value));
                 const formatDelta = compare?.format ?? format;
+                const change =
+                  current === null
+                    ? null
+                    : metric.changeMode === "points"
+                      ? pointsVsPrevious(current, before)
+                      : changeVsPrevious(current, before);
                 // A rounded "was" that reads the same as the headline looks
                 // like a rendering bug, so only show one that differs.
                 const prior =
-                  before === null || (!compare && format(before) === format(metric.value))
+                  before === null ||
+                  (!compare && metric.value !== null && format(before) === format(metric.value))
                     ? null
-                    : compare
+                    : compare && current !== null
                       ? ` · ${formatDelta(current)} vs ${formatDelta(before)} ${compare.note}`
                       : ` · was ${format(before)}`;
 
@@ -615,13 +644,14 @@ export default function AnalyticsDashboard() {
                       metric.wide ? styles.cardWide : ""
                     }`}
                     style={{ animationDelay: `${index * 45}ms` }}
+                    title={metric.hint}
                   >
                     <div className={styles.cardTop}>
                       <span className={styles.cardLabel}>{metric.label}</span>
                       {change ? (
                         <span
                           className={`${styles.trend} ${styles[`trend${change.direction}`]}`}
-                          title={`${formatDelta(current)} vs ${
+                          title={`${current === null ? "—" : formatDelta(current)} vs ${
                             before === null ? "—" : formatDelta(before)
                           }${compare ? ` ${compare.note}` : ""} in the ${metric.comparison}`}
                         >
@@ -634,7 +664,9 @@ export default function AnalyticsDashboard() {
                         </span>
                       ) : null}
                     </div>
-                    <strong className={styles.cardValue}>{format(metric.value)}</strong>
+                    <strong className={styles.cardValue}>
+                      {metric.value === null ? "—" : format(metric.value)}
+                    </strong>
                     <span className={styles.cardNote}>
                       {metric.note}
                       {prior ? <span className={styles.cardPrior}>{prior}</span> : null}
