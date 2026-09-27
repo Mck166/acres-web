@@ -178,7 +178,7 @@ export function validateRange(range: DateRange, now = new Date()): string | null
 
 /** Halifax is UTC-4 in winter and UTC-3 in summer, so try both and keep the
  * one that formats back to the day we asked for. */
-function atlanticMidnight(day: string): Date {
+export function atlanticMidnight(day: string): Date {
   const standard = new Date(`${day}T04:00:00Z`);
   if (ATLANTIC_DATE.format(standard) === day) return standard;
   return new Date(`${day}T03:00:00Z`);
@@ -202,18 +202,18 @@ function emptyDay(day: string): DayStats {
   };
 }
 
-function toNumber(value: unknown): number {
+export function toNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function toDate(value: unknown): Date | null {
+export function toDate(value: unknown): Date | null {
   if (value instanceof Date) return value;
   const timestamp = value as { toDate?: () => Date } | null;
   if (timestamp && typeof timestamp.toDate === "function") return timestamp.toDate();
   return null;
 }
 
-function toCounts(value: unknown): Record<string, number> {
+export function toCounts(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object") return {};
   const counts: Record<string, number> = {};
   for (const [name, count] of Object.entries(value as Record<string, unknown>)) {

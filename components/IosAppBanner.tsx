@@ -64,7 +64,8 @@ function shouldShowBanner() {
 export default function IosAppBanner() {
   const pathname = usePathname();
   const eligible = useSyncExternalStore(subscribe, shouldShowBanner, () => false);
-  const visible = eligible && pathname !== "/map";
+  // The agent sales pages have their own sticky checkout bar in the same spot.
+  const visible = eligible && pathname !== "/map" && !pathname.startsWith("/for-agents");
 
   useEffect(() => {
     if (!visible) {

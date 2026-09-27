@@ -11,6 +11,8 @@ export default function SiteFooter() {
         {" · "}
         <Link href="/blog">Read the blog</Link>
         {" · "}
+        <Link href="/for-agents">Websites for agents</Link>
+        {" · "}
         <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
           Download the app
         </a>

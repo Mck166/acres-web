@@ -910,6 +910,202 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Agent website funnel */
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 0 18px;
+}
+
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.funnelRow {
+  display: grid;
+  grid-template-columns: minmax(170px, 230px) 1fr minmax(150px, 190px);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  transition: background 160ms ease;
+}
+
+.funnelRow:hover {
+  background: var(--accent-soft);
+}
+
+.funnelLabel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.funnelLabel strong {
+  display: block;
+  font-size: 14px;
+}
+
+.funnelLabel small {
+  display: block;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.funnelIndex {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.funnelTrack {
+  height: 30px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.funnelFill {
+  display: block;
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--alt)));
+  animation: stretch 700ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+.funnelNumbers {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.funnelNumbers strong {
+  font-size: 20px;
+  letter-spacing: -0.4px;
+}
+
+.funnelNumbers span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.funnelNumbers .funnelStep {
+  color: var(--faint);
+}
+
+.funnelNumbers .funnelPrior {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.insight {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.insight strong {
+  color: var(--ink);
+}
+
+.insight a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.dataTable thead th {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dataTable tbody th {
+  font-weight: 600;
+}
+
+.dataTable tbody tr:last-child th,
+.dataTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.dataTable tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+.dataTable small {
+  display: block;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dataTable td small {
+  display: inline;
+  margin-left: 4px;
+}
+
+.dataTable a {
+  color: var(--accent);
+}
+
+.pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pillGood {
+  background: color-mix(in srgb, var(--up) 14%, transparent);
+  color: var(--up);
+}
+
+.pillBad {
+  background: color-mix(in srgb, var(--down) 14%, transparent);
+  color: var(--down);
+}
+
 /* Loading, empty and error states */
 
 .skeleton {
@@ -1033,6 +1229,7 @@
   .card,
   .bar,
   .rankFill,
+  .funnelFill,
   .pulse,
   .overlay,
   .skeletonCard {
@@ -1087,6 +1284,21 @@
 
   .rank {
     grid-template-columns: 18px 1fr 52px;
+  }
+
+  .funnelRow {
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+  }
+
+  .funnelTrack {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 18px;
+  }
+
+  .panelGrid {
+    grid-template-columns: 1fr;
   }
 
   .rankTrack,
