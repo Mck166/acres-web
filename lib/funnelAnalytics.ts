@@ -151,8 +151,8 @@ export type FunnelSummary = {
   capped: boolean;
 };
 
-/** Visitor documents read per load. A funnel this size is well past needing it. */
-const MAX_VISITORS = 20000;
+/** Visitor documents read per load. Firestore refuses a limit above 10000. */
+const MAX_VISITORS = 10000;
 const RECENT_CUSTOMERS = 12;
 const LIVE_STATUSES = ["active", "trialing", "past_due"];
 

@@ -41,6 +41,11 @@ export default function Header() {
   const isLinkActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
+  // The agent sales pages are a checkout funnel, so they stand on their own.
+  if (pathname.startsWith("/for-agents")) {
+    return null;
+  }
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
