@@ -115,11 +115,6 @@ export function trackAgentViewContent() {
   track("ViewContent", productParams());
 }
 
-/** The site has no cart. Claiming a site is the add-to-cart step. */
-export function trackAgentAddToCart() {
-  track("AddToCart", productParams());
-}
-
 /** Stripe Checkout is about to open. */
 export function trackAgentInitiateCheckout() {
   track("InitiateCheckout", productParams());
