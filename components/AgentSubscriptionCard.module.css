@@ -1,15 +1,30 @@
-.card {
-  background: var(--acres-surface);
-  border: 1px solid var(--acres-border);
-  border-radius: 20px;
-  padding: 24px;
+.studio {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+  margin: 0 0 28px;
+  overflow: hidden;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(143, 203, 155, 0.22), transparent 42%),
+    linear-gradient(165deg, #10201a 0%, #173127 100%);
+  color: #f3f6f4;
+  box-shadow: 0 24px 60px rgba(16, 32, 26, 0.18);
 }
 
-.card h2 {
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 28px 28px;
+}
+
+.kicker {
   margin: 0;
-  font-size: 22px;
+  color: var(--acres-green-light);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .head {
@@ -17,6 +32,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.08;
 }
 
 .price {
@@ -28,82 +51,164 @@
 
 .price span {
   margin-left: 4px;
-  color: var(--acres-brown);
+  color: rgba(243, 246, 244, 0.62);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0;
 }
 
-.meta {
+.lead,
+.hint,
+.confirm p {
   margin: 0;
-  color: var(--acres-brown);
+  color: rgba(243, 246, 244, 0.78);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 15px;
 }
 
 .meta strong {
-  color: var(--acres-black);
+  color: rgba(243, 246, 244, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.card a {
-  color: var(--acres-green);
-  font-weight: 700;
+.points {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.points li {
+  position: relative;
+  padding-left: 18px;
+  color: rgba(243, 246, 244, 0.88);
+  font-size: 15px;
+}
+
+.points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--acres-green-light);
 }
 
 .pill {
-  padding: 4px 10px;
+  padding: 5px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   white-space: nowrap;
 }
 
 .pillLive {
-  background: rgba(91, 146, 121, 0.16);
-  color: #3f6e59;
+  background: rgba(143, 203, 155, 0.18);
+  color: var(--acres-green-light);
 }
 
 .pillEnded {
-  background: rgba(192, 67, 63, 0.12);
-  color: var(--acres-error);
+  background: rgba(192, 67, 63, 0.2);
+  color: #ffd0ce;
 }
 
-.card button {
+.primary,
+.secondary,
+.ghost,
+.danger {
   justify-self: start;
+  width: fit-content;
   border: 0;
   border-radius: 12px;
-  padding: 11px 16px;
-  background: var(--acres-green);
-  color: #fff;
-  font-weight: 700;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
 }
 
-.card button:disabled {
+.primary {
+  background: var(--acres-green-light);
+  color: #10201a;
+}
+
+.secondary {
+  background: transparent;
+  color: #f3f6f4;
+  border: 1px solid rgba(243, 246, 244, 0.28);
+}
+
+.ghost {
+  padding-left: 0;
+  background: transparent;
+  color: rgba(243, 246, 244, 0.72);
+}
+
+.danger {
+  background: #c0433f;
+  color: #fff;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
   opacity: 0.6;
   cursor: wait;
 }
 
-.secondary {
-  background: transparent !important;
-  color: var(--acres-black) !important;
-  border: 1px solid var(--acres-border) !important;
+.claim {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(243, 246, 244, 0.12);
 }
 
-.danger {
-  background: var(--acres-error) !important;
+.claim label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.claim input {
+  width: 100%;
+  border: 1px solid rgba(243, 246, 244, 0.18);
+  border-radius: 12px;
+  padding: 12px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f3f6f4;
+  font: inherit;
+  font-weight: 500;
+}
+
+.claim input::placeholder {
+  color: rgba(243, 246, 244, 0.45);
+}
+
+.billing {
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 .confirm {
   display: grid;
   gap: 10px;
-}
-
-.confirm p {
-  margin: 0;
-  color: var(--acres-brown);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 .actions {
@@ -114,6 +219,131 @@
 
 .error {
   margin: 0;
+  color: #ffd0ce;
+  font-size: 14px;
+}
+
+.preview {
+  position: relative;
+  min-height: 460px;
+  background:
+    linear-gradient(180deg, rgba(16, 32, 26, 0.2), rgba(16, 32, 26, 0.55)),
+    #0c1612;
+}
+
+.frame {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  bottom: 58px;
+  left: 18px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.caption {
+  position: absolute;
+  right: 22px;
+  bottom: 16px;
+  left: 22px;
+  margin: 0;
+  color: rgba(243, 246, 244, 0.78);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.caption a {
+  color: var(--acres-green-light);
+  font-weight: 800;
+}
+
+.claimStrip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 1fr) auto;
+  gap: 12px 16px;
+  align-items: center;
+  margin: 0 0 28px;
+  padding: 18px 20px;
+  border: 1px solid var(--acres-border);
+  border-radius: 20px;
+  background: var(--acres-surface);
+  color: var(--acres-black);
+}
+
+.claimStrip h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.claimStrip p {
+  margin: 0;
+  color: var(--acres-brown);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.claimStrip input {
+  width: 100%;
+  border: 1px solid var(--acres-border);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font: inherit;
+  color: var(--acres-black);
+  background: #fff;
+}
+
+.claimStrip button {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: var(--acres-green);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.claimStrip button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.stripError {
+  grid-column: 1 / -1;
+  margin: 0;
   color: var(--acres-error);
   font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .studio {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 700px) {
+  .claimStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 24px 20px 22px;
+  }
+
+  .preview {
+    min-height: 280px;
+  }
 }

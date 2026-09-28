@@ -319,6 +319,9 @@ export type AgentSubscription = {
   monthly_cents: number;
   currency: string;
   renews: boolean;
+  onboarded: boolean;
+  domain: string;
+  checkout_session_id: string;
 };
 
 export async function fetchAgentSubscription() {
@@ -334,6 +337,14 @@ export async function cancelAgentSubscription() {
 
 export async function resumeAgentSubscription() {
   return authedRequest<AgentSubscription>("/agent-sites/subscription/resume", { method: "POST" });
+}
+
+export async function claimAgentSubscription(sessionId: string) {
+  const data = await authedRequest<{ subscription: AgentSubscription | null }>(
+    "/agent-sites/subscription/claim",
+    { method: "POST", body: { session_id: sessionId } },
+  );
+  return data.subscription;
 }
 
 export async function fetchAgentClients() {

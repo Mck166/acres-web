@@ -181,17 +181,22 @@ async function readError(response: Response, fallback: string): Promise<string> 
   return fallback;
 }
 
-/** Create a Stripe Checkout session and return its URL. */
-export async function startAgentCheckout(cta: string): Promise<string> {
-  flushFunnel();
+async function authHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   try {
     const { getFirebaseAuth } = await import("@/lib/firebase");
     const user = getFirebaseAuth().currentUser;
     if (user) headers.Authorization = `Bearer ${await user.getIdToken()}`;
   } catch {
-    // A signed-out purchase still checks out; the account page matches it by email.
+    // A signed-out visit still checks out and can still send the intake form.
   }
+  return headers;
+}
+
+/** Create a Stripe Checkout session and return its URL. */
+export async function startAgentCheckout(cta: string): Promise<string> {
+  flushFunnel();
+  const headers = await authHeaders();
   const response = await fetch("/acres-api/agent-sites/checkout", {
     method: "POST",
     headers,
@@ -236,7 +241,7 @@ export type OnboardingAnswers = {
 export async function submitAgentOnboarding(sessionId: string, answers: OnboardingAnswers) {
   const response = await fetch("/acres-api/agent-sites/onboarding", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authHeaders(),
     body: JSON.stringify({ session_id: sessionId, ...answers }),
   });
   if (!response.ok) {

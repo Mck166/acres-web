@@ -149,9 +149,12 @@ export default function AccountPage() {
           <div className={styles.avatarFallback}>{initial}</div>
         )}
         <div className={styles.identityCopy}>
-          <p className={styles.kicker}>{agent ? "Agent account" : "Looking for a home"}</p>
+          <p className={styles.kicker}>{agent ? "Website studio" : "Looking for a home"}</p>
           <h1>{displayName}</h1>
           <p className={styles.lead}>{user.email || "Signed in with Apple"}</p>
+          {agent ? (
+            <p className={styles.meta}>Your name, your listings, and the website we build from them.</p>
+          ) : null}
         </div>
         <nav className={styles.topNav} aria-label="Account shortcuts">
           <Link href="/favorites">Favorites</Link>
@@ -251,6 +254,8 @@ export default function AccountPage() {
         </nav>
       </header>
 
+      <AgentSubscriptionCard agent={agent} />
+
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           <form
@@ -282,7 +287,7 @@ export default function AccountPage() {
             }}
           >
             <div className={styles.cardHead}>
-              <h2>Profile</h2>
+              <h2>{agent ? "Your details" : "Profile"}</h2>
               <button type="submit" disabled={savingProfile}>
                 {savingProfile ? "Saving…" : "Save"}
               </button>
@@ -345,7 +350,10 @@ export default function AccountPage() {
               }}
             >
               <div className={styles.cardHead}>
-                <h2>Public profile</h2>
+                <div>
+                  <h2>What goes on your site</h2>
+                  <p className={styles.meta}>Brokerage, bio and links. This is what we write and design from.</p>
+                </div>
                 <button type="submit" disabled={savingPublic}>
                   {savingPublic ? "Saving…" : "Save"}
                 </button>
@@ -375,8 +383,6 @@ export default function AccountPage() {
               </label>
             </form>
           ) : null}
-
-          <AgentSubscriptionCard agent={agent} />
         </aside>
 
         {agent ? (
@@ -384,7 +390,7 @@ export default function AccountPage() {
             <div className={styles.cardHead}>
               <div>
                 <h2>Open houses</h2>
-                <p className={styles.meta}>Buyers will see this until the end time. The listing PID is required.</p>
+                <p className={styles.meta}>These run on your site and in the Acres feed until the end time. The listing PID is required.</p>
               </div>
             </div>
             <OpenHouseCompose
@@ -417,6 +423,7 @@ export default function AccountPage() {
         {agent ? (
           <section className={`${styles.card} ${styles.clients}`}>
             <h2>Clients</h2>
+            <p className={styles.meta}>People who asked you to represent them. Confirm a request to see the homes they saved.</p>
             {clients.length === 0 ? <p className={styles.meta}>No client requests yet.</p> : null}
             <div className={styles.clientList}>
               {clients.map((client) => (

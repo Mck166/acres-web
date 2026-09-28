@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
+import { claimAgentSubscription } from "@/lib/api";
 import { OFFER } from "@/lib/agentOffer";
 import {
   fetchAgentCheckoutSession,
@@ -69,6 +71,7 @@ type LoadState =
   | { status: "error"; message: string };
 
 export default function AgentWelcome({ sessionId }: { sessionId: string }) {
+  const { user, loading: authLoading } = useAuth();
   const [load, setLoad] = useState<LoadState>(
     sessionId ? { status: "loading" } : { status: "error", message: "missing" },
   );
@@ -76,6 +79,13 @@ export default function AgentWelcome({ sessionId }: { sessionId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (!sessionId || authLoading || !user) return;
+    claimAgentSubscription(sessionId).catch(() => {
+      // The studio can still attach this checkout from the receipt link.
+    });
+  }, [authLoading, sessionId, user]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -177,6 +187,26 @@ export default function AgentWelcome({ sessionId }: { sessionId: string }) {
             your dashboard.
           </li>
         </ol>
+        {authLoading ? (
+          <p className={styles.accountNote}>Checking your account…</p>
+        ) : user ? (
+          <Link href="/account" className={styles.account}>
+            Open your website studio
+          </Link>
+        ) : (
+          <>
+            <p className={styles.accountNote}>
+              Sign in to put this website on your Acres account. Any login works, even when it is
+              not the email you paid with.
+            </p>
+            <Link
+              href={`/login?next=${encodeURIComponent(`/for-agents/welcome?session_id=${sessionId}`)}`}
+              className={styles.account}
+            >
+              Sign in and add it to my account
+            </Link>
+          </>
+        )}
       </div>
     );
   }
