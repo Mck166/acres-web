@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { startAgentCheckout, trackFunnel } from "@/lib/funnel";
+import { trackAgentAddToCart, trackAgentInitiateCheckout } from "@/lib/metaPixel";
 import styles from "@/components/AgentCheckoutButton.module.css";
 
 type Props = {
@@ -30,7 +31,10 @@ export default function AgentCheckoutButton({
     trackFunnel("cta_click", { label: cta });
     try {
       const url = await startAgentCheckout(cta);
-      window.location.assign(url);
+      trackAgentAddToCart();
+      trackAgentInitiateCheckout();
+      // Give the pixel a moment to leave before Stripe replaces the page.
+      window.setTimeout(() => window.location.assign(url), 300);
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Could not start checkout.");
       setLoading(false);

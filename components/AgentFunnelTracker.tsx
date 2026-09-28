@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { flushFunnel, trackFunnel } from "@/lib/funnel";
+import { trackAgentViewContent } from "@/lib/metaPixel";
 
 const SCROLL_MARKS = [25, 50, 75, 100] as const;
 
@@ -21,6 +22,7 @@ export default function AgentFunnelTracker({ page, pricingId }: Props) {
     if (trackedPath !== key) {
       trackedPath = key;
       trackFunnel(page === "landing" ? "landing_view" : "welcome_view");
+      if (page === "landing") trackAgentViewContent();
       const params = new URLSearchParams(window.location.search);
       if (page === "landing" && params.get("checkout") === "cancelled") {
         trackFunnel("checkout_cancelled");

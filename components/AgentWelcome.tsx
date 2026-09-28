@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import GlassButton from "@/components/GlassButton";
 import { claimAgentSubscription } from "@/lib/api";
 import { OFFER } from "@/lib/agentOffer";
+import { trackAgentPurchase } from "@/lib/metaPixel";
 import {
   fetchAgentCheckoutSession,
   submitAgentOnboarding,
@@ -92,7 +93,10 @@ export default function AgentWelcome({ sessionId }: { sessionId: string }) {
     let cancelled = false;
     fetchAgentCheckoutSession(sessionId)
       .then((session) => {
-        if (!cancelled) setLoad({ status: "ready", session });
+        if (!cancelled) {
+          setLoad({ status: "ready", session });
+          if (session.paid) trackAgentPurchase(sessionId);
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return;
