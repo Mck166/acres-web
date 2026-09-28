@@ -2,7 +2,7 @@ import { OFFER } from "@/lib/agentOffer";
 
 /** Public pixel id. It is visible in the page source either way. */
 export const META_PIXEL_ID =
-  process.env.NEXT_PUBLIC_META_PIXEL_ID || "1413927597474285";
+  process.env.NEXT_PUBLIC_META_PIXEL_ID || "674443274891377";
 
 const PRODUCT_ID = "agent-website";
 
