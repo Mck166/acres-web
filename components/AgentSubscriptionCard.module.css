@@ -1,0 +1,119 @@
+.card {
+  background: var(--acres-surface);
+  border: 1px solid var(--acres-border);
+  border-radius: 20px;
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.price {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+}
+
+.price span {
+  margin-left: 4px;
+  color: var(--acres-brown);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.meta {
+  margin: 0;
+  color: var(--acres-brown);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.meta strong {
+  color: var(--acres-black);
+}
+
+.card a {
+  color: var(--acres-green);
+  font-weight: 700;
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pillLive {
+  background: rgba(91, 146, 121, 0.16);
+  color: #3f6e59;
+}
+
+.pillEnded {
+  background: rgba(192, 67, 63, 0.12);
+  color: var(--acres-error);
+}
+
+.card button {
+  justify-self: start;
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 16px;
+  background: var(--acres-green);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.card button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.secondary {
+  background: transparent !important;
+  color: var(--acres-black) !important;
+  border: 1px solid var(--acres-border) !important;
+}
+
+.danger {
+  background: var(--acres-error) !important;
+}
+
+.confirm {
+  display: grid;
+  gap: 10px;
+}
+
+.confirm p {
+  margin: 0;
+  color: var(--acres-brown);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.error {
+  margin: 0;
+  color: var(--acres-error);
+  font-size: 14px;
+}

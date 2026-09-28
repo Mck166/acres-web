@@ -184,9 +184,17 @@ async function readError(response: Response, fallback: string): Promise<string> 
 /** Create a Stripe Checkout session and return its URL. */
 export async function startAgentCheckout(cta: string): Promise<string> {
   flushFunnel();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const { getFirebaseAuth } = await import("@/lib/firebase");
+    const user = getFirebaseAuth().currentUser;
+    if (user) headers.Authorization = `Bearer ${await user.getIdToken()}`;
+  } catch {
+    // A signed-out purchase still checks out; the account page matches it by email.
+  }
   const response = await fetch("/acres-api/agent-sites/checkout", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ anon_id: funnelAnonId(), cta, context: funnelContext() }),
   });
   if (!response.ok) {

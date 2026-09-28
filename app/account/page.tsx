@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import AgentSubscriptionCard from "@/components/AgentSubscriptionCard";
 import { useAuth } from "@/components/AuthProvider";
 import OpenHouseCard from "@/components/OpenHouseCard";
 import OpenHouseCompose from "@/components/OpenHouseCompose";
@@ -374,6 +375,8 @@ export default function AccountPage() {
               </label>
             </form>
           ) : null}
+
+          <AgentSubscriptionCard agent={agent} />
         </aside>
 
         {agent ? (

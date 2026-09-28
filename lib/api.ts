@@ -312,6 +312,30 @@ export async function claimAgentClient(agentId: string) {
   });
 }
 
+export type AgentSubscription = {
+  status: string;
+  cancel_at_period_end: boolean;
+  current_period_end: string | null;
+  monthly_cents: number;
+  currency: string;
+  renews: boolean;
+};
+
+export async function fetchAgentSubscription() {
+  const data = await authedRequest<{ subscription: AgentSubscription | null }>(
+    "/agent-sites/subscription",
+  );
+  return data.subscription;
+}
+
+export async function cancelAgentSubscription() {
+  return authedRequest<AgentSubscription>("/agent-sites/subscription/cancel", { method: "POST" });
+}
+
+export async function resumeAgentSubscription() {
+  return authedRequest<AgentSubscription>("/agent-sites/subscription/resume", { method: "POST" });
+}
+
 export async function fetchAgentClients() {
   const data = await authedRequest<{ clients?: Array<Record<string, unknown>> }>("/social/clients");
   return data.clients || [];
