@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchPropertiesByIds, type Property } from "@/lib/api";
 import { listOpenHouses, type OpenHouseRecord } from "@/lib/social";
-import { filterUpcomingOpenHouses, formatOpenHouseWhen, matchPropertyForOpenHouse, openHouseBadge } from "@/lib/openHouse";
+import {
+  filterUpcomingOpenHouses,
+  formatOpenHouseWhen,
+  matchPropertyForOpenHouse,
+  openHouseBadge,
+} from "@/lib/openHouse";
 import { getPropertyAddress } from "@/lib/properties";
 import styles from "./HomePosts.module.css";
 
@@ -26,21 +31,33 @@ export default function HomePosts() {
   if (openHouses.length === 0) return null;
 
   return (
-    <section className={styles.section}>
+    <section className={styles.section} aria-labelledby="open-houses-heading">
       <div className={styles.header}>
-        <h2>Upcoming open houses</h2>
-        <Link href="/feed">See open houses</Link>
+        <div>
+          <p className={styles.kicker}>This week</p>
+          <h2 id="open-houses-heading">Upcoming open houses</h2>
+        </div>
+        <Link href="/feed" className={styles.link}>
+          See open houses
+        </Link>
       </div>
       <div className={styles.grid}>
         {openHouses.map((openHouse) => {
           const listing = matchPropertyForOpenHouse(openHouse, properties);
           const badge = openHouseBadge(openHouse.startsAt, openHouse.endsAt);
           return (
-            <article key={openHouse.id}>
-              {badge ? <strong>{badge.text}</strong> : <strong>{openHouse.authorName}</strong>}
-              <p>{listing ? getPropertyAddress(listing) : openHouse.address}</p>
-              <p>{formatOpenHouseWhen(openHouse.startsAt, openHouse.endsAt)}</p>
-              <Link href={listing ? `/properties/${listing._id}` : "/feed"}>View listing</Link>
+            <article key={openHouse.id} className={styles.card}>
+              <strong className={styles.badge}>{badge ? badge.text : openHouse.authorName}</strong>
+              <p className={styles.address}>
+                {listing ? getPropertyAddress(listing) : openHouse.address}
+              </p>
+              <p className={styles.when}>{formatOpenHouseWhen(openHouse.startsAt, openHouse.endsAt)}</p>
+              <Link
+                href={listing ? `/properties/${listing._id}` : "/feed"}
+                className={styles.cardLink}
+              >
+                View listing
+              </Link>
             </article>
           );
         })}
