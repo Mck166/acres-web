@@ -1,11 +1,18 @@
 .section {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
+}
+
+.gridBusy {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .status {

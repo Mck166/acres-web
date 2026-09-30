@@ -203,21 +203,51 @@ export async function fetchMapProperties(
   return data.properties || [];
 }
 
+export type PropertyFeedFilters = {
+  q?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  minBeds?: number | null;
+  maxBeds?: number | null;
+  minBaths?: number | null;
+  maxBaths?: number | null;
+};
+
+function appendFeedParam(
+  params: URLSearchParams,
+  key: string,
+  value: string | number | null | undefined,
+) {
+  if (value === null || value === undefined || value === "") return;
+  params.set(key, String(value));
+}
+
 export async function fetchFeed({
   firebaseUid = null,
   limit = FEED_PAGE_SIZE,
   cursor = null,
   revalidate,
+  filters = null,
 }: {
   firebaseUid?: string | null;
   limit?: number;
   cursor?: string | null;
   revalidate?: number | false;
+  filters?: PropertyFeedFilters | null;
 } = {}): Promise<FeedResponse> {
   const params = new URLSearchParams();
   if (firebaseUid) params.set("firebase_uid", firebaseUid);
   params.set("limit", String(limit));
   if (cursor) params.set("cursor", cursor);
+  if (filters) {
+    appendFeedParam(params, "q", filters.q);
+    appendFeedParam(params, "min_price", filters.minPrice);
+    appendFeedParam(params, "max_price", filters.maxPrice);
+    appendFeedParam(params, "min_beds", filters.minBeds);
+    appendFeedParam(params, "max_beds", filters.maxBeds);
+    appendFeedParam(params, "min_baths", filters.minBaths);
+    appendFeedParam(params, "max_baths", filters.maxBaths);
+  }
 
   const data = await request<{
     properties?: Property[];

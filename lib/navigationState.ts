@@ -1,4 +1,5 @@
 import type { Property } from "@/lib/api";
+import type { PropertyListFilters } from "@/lib/propertyFilters";
 
 export const PROPERTIES_LIST_STATE_KEY = "acres:properties-list";
 
@@ -7,6 +8,7 @@ export type PropertiesListState = {
   cursor: string | null;
   hasMore: boolean;
   scrollY: number;
+  filters?: PropertyListFilters;
 };
 
 export type MapViewParams = {
