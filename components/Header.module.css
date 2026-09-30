@@ -2,10 +2,11 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(16, 32, 26, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--acres-border);
+  border-bottom: 1px solid rgba(143, 203, 155, 0.16);
+  color: #f3f6f4;
 }
 
 .inner {
@@ -22,7 +23,7 @@
   font-family: var(--font-brand), cursive;
   font-size: 28px;
   letter-spacing: -0.5px;
-  color: var(--acres-green);
+  color: #fff;
   line-height: 1;
 }
 
@@ -33,14 +34,15 @@
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--acres-border);
+  border: 1px solid rgba(243, 246, 244, 0.22);
   border-radius: 12px;
-  background: var(--acres-surface);
+  background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
 }
 
 .menuButton:hover {
-  border-color: rgba(18, 19, 15, 0.18);
+  border-color: rgba(143, 203, 155, 0.45);
+  background: rgba(143, 203, 155, 0.12);
 }
 
 .menuIcon {
@@ -56,7 +58,7 @@
   width: 100%;
   height: 2px;
   border-radius: 999px;
-  background: var(--acres-text);
+  background: #f3f6f4;
   transition: transform 160ms ease, opacity 160ms ease;
 }
 
@@ -86,14 +88,15 @@
   min-height: 44px;
   padding: 8px 12px;
   border-radius: 12px;
-  color: var(--acres-text);
+  color: rgba(243, 246, 244, 0.82);
   font-size: 15px;
   font-weight: 500;
 }
 
 .link:hover,
 .linkActive {
-  color: var(--acres-green);
+  color: var(--acres-green-light);
+  background: rgba(143, 203, 155, 0.1);
 }
 
 .account {
@@ -108,9 +111,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--acres-brown);
+  color: rgba(243, 246, 244, 0.62);
   font-size: 13px;
   text-decoration: none;
+}
+
+.email:hover {
+  color: var(--acres-green-light);
 }
 
 .logout {
@@ -139,13 +146,13 @@
   align-items: center;
   min-height: 40px;
   padding: 8px 12px;
-  color: var(--acres-text);
+  color: rgba(243, 246, 244, 0.88);
   font-size: 14px;
   font-weight: 600;
 }
 
 .loginText:hover {
-  color: var(--acres-green);
+  color: var(--acres-green-light);
 }
 
 .loginLink {
@@ -155,17 +162,17 @@
   min-height: 40px;
   padding: 0 16px;
   border-radius: 12px;
-  background: var(--acres-green);
-  color: #fff;
+  background: var(--acres-green-light);
+  color: #10201a;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1;
   text-align: center;
 }
 
 .loginLink:hover {
-  background: #4e7f69;
-  color: #fff;
+  background: #a6d7b0;
+  color: #10201a;
 }
 
 @media (max-width: 720px) {
@@ -188,10 +195,10 @@
     align-items: stretch;
     gap: 4px;
     padding: 8px;
-    border: 1px solid var(--acres-border);
+    border: 1px solid rgba(143, 203, 155, 0.2);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 12px 32px rgba(18, 19, 15, 0.12);
+    background: rgba(16, 32, 26, 0.98);
+    box-shadow: 0 16px 40px rgba(8, 16, 13, 0.45);
   }
 
   .navOpen {
@@ -209,7 +216,7 @@
     gap: 8px;
     margin: 4px 0 0;
     padding-top: 8px;
-    border-top: 1px solid var(--acres-border);
+    border-top: 1px solid rgba(243, 246, 244, 0.12);
   }
 
   .email {
