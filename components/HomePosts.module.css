@@ -1,32 +1,95 @@
 .section {
-  margin: 48px 0;
+  max-width: 1200px;
+  margin: 72px auto 0;
+  padding: 0 20px;
 }
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  gap: 12px 18px;
+  margin-bottom: 22px;
 }
 
-.header a {
+.kicker {
+  margin: 0 0 10px;
   color: var(--acres-green);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  color: var(--acres-text);
+}
+
+.link {
+  color: var(--acres-green);
+  font-size: 15px;
   font-weight: 700;
+}
+
+.link:hover {
+  text-decoration: underline;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
-.grid article {
-  background: var(--acres-surface);
-  border: 1px solid var(--acres-border);
-  border-radius: 14px;
-  padding: 14px;
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 18px 16px;
+  border-top: 3px solid var(--acres-green);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
 }
 
-.grid p {
+.badge {
+  color: var(--acres-text);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.address,
+.when {
+  margin: 0;
   color: var(--acres-brown);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.address {
+  color: var(--acres-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cardLink {
+  margin-top: 6px;
+  color: var(--acres-green);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cardLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .section {
+    margin-top: 56px;
+  }
 }
