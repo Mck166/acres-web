@@ -4,6 +4,8 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.myacresapp.com/api";
 
 const nextConfig: NextConfig = {
+  // The dev server is reached at 127.0.0.1 while it binds all interfaces.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async headers() {
     return [
       {
