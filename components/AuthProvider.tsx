@@ -57,6 +57,24 @@ export function useAuth() {
   return context;
 }
 
+// The app map is a webview of this site. Starting Firebase Auth there navigates
+// to the Firebase auth domain (the URL with the API key). iOS then opens that
+// address outside the app. The map saves favorites through the app, so it
+// never needs this sign-in frame. The signals are set by the app before the
+// page runs.
+function isAcresAppEmbed() {
+  if (typeof window === "undefined") return false;
+  const embed = window as Window & {
+    ReactNativeWebView?: unknown;
+    __acresOverlayBottom?: number;
+  };
+  return (
+    Boolean(embed.ReactNativeWebView) ||
+    typeof embed.__acresOverlayBottom === "number" ||
+    document.documentElement.getAttribute("data-acres-embed") === "1"
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -69,6 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isAcresAppEmbed()) {
+      setLoading(false);
+      return;
+    }
+
     const auth = getFirebaseAuth();
     let unsubscribe = () => {};
 
