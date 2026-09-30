@@ -218,7 +218,9 @@ export type AgentCheckoutSession = {
 };
 
 export async function fetchAgentCheckoutSession(sessionId: string): Promise<AgentCheckoutSession> {
-  const response = await fetch(`/acres-api/agent-sites/session/${encodeURIComponent(sessionId)}`);
+  const response = await fetch(`/acres-api/agent-sites/session/${encodeURIComponent(sessionId)}`, {
+    headers: await authHeaders(),
+  });
   if (!response.ok) {
     throw new Error(await readError(response, "We could not find that checkout."));
   }

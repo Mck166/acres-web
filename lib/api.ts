@@ -223,7 +223,6 @@ function appendFeedParam(
 }
 
 export async function fetchFeed({
-  firebaseUid = null,
   limit = FEED_PAGE_SIZE,
   cursor = null,
   revalidate,
@@ -236,7 +235,6 @@ export async function fetchFeed({
   filters?: PropertyFeedFilters | null;
 } = {}): Promise<FeedResponse> {
   const params = new URLSearchParams();
-  if (firebaseUid) params.set("firebase_uid", firebaseUid);
   params.set("limit", String(limit));
   if (cursor) params.set("cursor", cursor);
   if (filters) {
@@ -255,7 +253,7 @@ export async function fetchFeed({
     has_more?: boolean;
     remaining?: number;
     total_available?: number;
-  }>(`/feed?${params.toString()}`, { revalidate });
+  }>(`/feed?${params.toString()}`, { revalidate, headers: await optionalAuthHeaders() });
 
   return {
     properties: data.properties || [],
@@ -295,19 +293,27 @@ export async function fetchPropertyById(propertyId: string): Promise<Property | 
   }
 }
 
-export async function favoriteProperty(propertyId: string, firebaseUid?: string | null) {
-  const params = new URLSearchParams();
-  if (firebaseUid) params.set("firebase_uid", firebaseUid);
-  const query = params.toString() ? `?${params.toString()}` : "";
-
+export async function favoriteProperty(propertyId: string) {
   try {
-    return await request<{ success?: boolean }>(
-      `/properties/${encodeURIComponent(propertyId)}/favorite${query}`,
-      { method: "POST", timeout: 10000, revalidate: false },
+    return await authedRequest<{ success?: boolean }>(
+      `/properties/${encodeURIComponent(propertyId)}/favorite`,
+      { method: "POST", timeout: 10000 },
     );
   } catch (error) {
     console.error("Error favoriting property:", error);
     return { success: false };
+  }
+}
+
+async function optionalAuthHeaders(): Promise<Record<string, string>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const { getFirebaseAuth } = await import("@/lib/firebase");
+    const user = getFirebaseAuth().currentUser;
+    if (!user) return {};
+    return { Authorization: `Bearer ${await user.getIdToken()}` };
+  } catch {
+    return {};
   }
 }
 
@@ -480,14 +486,12 @@ export async function fetchTodayActivity(limit = 12) {
   return data.properties || [];
 }
 
-export async function refreshSeenProperties(firebaseUid: string) {
-  if (!firebaseUid) return { success: false };
-
+export async function refreshSeenProperties() {
   try {
-    return await request<{ success?: boolean }>(
-      `/users/${encodeURIComponent(firebaseUid)}/seen/refresh`,
-      { method: "POST", timeout: 10000, revalidate: false },
-    );
+    return await authedRequest<{ success?: boolean }>("/users/me/seen/refresh", {
+      method: "POST",
+      timeout: 10000,
+    });
   } catch (error) {
     console.warn("Could not refresh seen properties:", error);
     return { success: false };

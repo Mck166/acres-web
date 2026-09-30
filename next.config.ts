@@ -5,7 +5,36 @@ const API_BASE_URL =
 
 const nextConfig: NextConfig = {
   async headers() {
+    const security = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+      {
+        key: "Content-Security-Policy-Report-Only",
+        value: [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+          "style-src 'self' 'unsafe-inline' https:",
+          "img-src 'self' data: blob: https:",
+          "font-src 'self' data: https:",
+          "connect-src 'self' https: wss:",
+          "frame-src 'self' https:",
+          "frame-ancestors 'none'",
+        ].join("; "),
+      },
+    ];
+    if (process.env.NODE_ENV === "production") {
+      security.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains",
+      });
+    }
     return [
+      {
+        source: "/:path*",
+        headers: security,
+      },
       {
         source: "/.well-known/apple-app-site-association",
         headers: [{ key: "Content-Type", value: "application/json" }],
@@ -21,11 +50,6 @@ const nextConfig: NextConfig = {
       {
         source: "/acres-api/:path*",
         destination: `${API_BASE_URL}/:path*`,
-      },
-      {
-        source: "/ns-parcels/:path*",
-        destination:
-          "https://nsgiwa2.novascotia.ca/arcgis/rest/services/PLAN/PLAN_NSPRD_WM84/MapServer/:path*",
       },
     ];
   },

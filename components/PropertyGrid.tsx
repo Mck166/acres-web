@@ -247,10 +247,10 @@ export default function PropertyGrid({
       try {
         if (alreadySaved) {
           await removeFromFavorites(user.uid, favoriteDocIdForProperty(propertyId));
-          await refreshSeenProperties(user.uid);
+          await refreshSeenProperties();
         } else {
           await addToFavorites(user.uid, propertyId);
-          await favoriteProperty(propertyId, user.uid);
+          await favoriteProperty(propertyId);
         }
       } catch (saveError) {
         console.error("Error updating favorite:", saveError);

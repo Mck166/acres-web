@@ -11,17 +11,11 @@ import { splitDisplayName } from "@/lib/appleAuth";
 import { needsEmailVerification } from "@/lib/emailVerification";
 import { destinationAfterOnboarding, verifyEmailPath } from "@/lib/completeAuth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { parseSocialLinkLines } from "@/lib/safeUrl";
 import styles from "@/app/onboarding/page.module.css";
 
 function parseLinks(text: string) {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((url) => ({
-      label: url.replace(/^https?:\/\//, ""),
-      url: url.includes("://") ? url : `https://${url}`,
-    }));
+  return parseSocialLinkLines(text);
 }
 
 function questionsFor(accountType: string | null) {

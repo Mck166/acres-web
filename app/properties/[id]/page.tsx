@@ -10,6 +10,7 @@ import RequestViewingButton from "@/components/RequestViewingButton";
 import PropertyGallery from "@/components/PropertyGallery";
 import PropertyViewTracker from "@/components/PropertyViewTracker";
 import { SITE_NAME } from "@/lib/site";
+import { httpUrl } from "@/lib/safeUrl";
 import {
   field,
   formatBathLabel,
@@ -164,7 +165,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const beds = getBeds(property);
   const baths = getBaths(property);
   const livingArea = getLivingArea(property);
-  const listingUrl = field(property, "url");
+  const listingUrl = httpUrl(field(property, "url"));
   const listedAt = formatEventDate(property.listed_on);
   const priceChangedAt = formatEventDate(property.price_changed_on);
   const pendingAt = formatEventDate(property.pending_on);
@@ -327,7 +328,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                     <dd>
                       <a
                         className={styles.external}
-                        href={String(listingUrl)}
+                        href={listingUrl}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
                       >

@@ -58,10 +58,10 @@ export default function PropertyFavoriteButton({ property }: { property: Propert
     try {
       if (nextValue) {
         await addToFavorites(user.uid, propertyId);
-        await favoriteProperty(propertyId, user.uid);
+        await favoriteProperty(propertyId);
       } else {
         await removeFromFavorites(user.uid, favoriteDocIdForProperty(propertyId));
-        await refreshSeenProperties(user.uid);
+        await refreshSeenProperties();
       }
     } catch (error) {
       console.error("Error updating favorite:", error);

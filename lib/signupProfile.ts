@@ -2,6 +2,7 @@ import { getFirebaseAuth } from "@/lib/firebase";
 import { needsEmailVerification } from "@/lib/emailVerification";
 import { getUserData, saveUserOnboarding, updateUserData, type UserProfile } from "@/lib/firestore";
 import { publishAgentProfile } from "@/lib/social";
+import { parseSocialLinkLines } from "@/lib/safeUrl";
 
 export type SignupAnswers = {
   accountType: string | null;
@@ -16,14 +17,7 @@ export type SignupAnswers = {
 };
 
 export function parseSocialLinks(text: string) {
-  return String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((url) => ({
-      label: url.replace(/^https?:\/\//, ""),
-      url: url.includes("://") ? url : `https://${url}`,
-    }));
+  return parseSocialLinkLines(text);
 }
 
 export function buildSignupPayload(answers: SignupAnswers) {

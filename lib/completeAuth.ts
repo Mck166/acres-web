@@ -2,7 +2,20 @@ import { getFirebaseAuth } from "@/lib/firebase";
 import { needsEmailVerification } from "@/lib/emailVerification";
 
 export function safeNextPath(nextPath: string, fallback = "/") {
-  return nextPath.startsWith("/") ? nextPath : fallback;
+  if (typeof nextPath !== "string") return fallback;
+  const trimmed = nextPath.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("\\")) {
+    return fallback;
+  }
+  if (trimmed.includes("://")) return fallback;
+  try {
+    const base = "https://myacresapp.com";
+    const url = new URL(trimmed, base);
+    if (url.origin !== base) return fallback;
+    return `${url.pathname}${url.search}${url.hash}` || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function isAuthFlowPath(path: string) {

@@ -82,33 +82,33 @@ export default function AgentWelcome({ sessionId }: { sessionId: string }) {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    if (!sessionId || authLoading || !user) return;
-    claimAgentSubscription(sessionId).catch(() => {
-      // The studio can still attach this checkout from the receipt link.
-    });
-  }, [authLoading, sessionId, user]);
-
-  useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || authLoading) return;
     let cancelled = false;
-    fetchAgentCheckoutSession(sessionId)
-      .then((session) => {
-        if (!cancelled) {
-          setLoad({ status: "ready", session });
-          if (session.paid) trackAgentPurchase(sessionId);
+    (async () => {
+      if (user) {
+        try {
+          await claimAgentSubscription(sessionId);
+        } catch {
+          // The studio can still attach this checkout from the receipt link.
         }
-      })
-      .catch((error: unknown) => {
+      }
+      try {
+        const session = await fetchAgentCheckoutSession(sessionId);
+        if (cancelled) return;
+        setLoad({ status: "ready", session });
+        if (session.paid) trackAgentPurchase(sessionId);
+      } catch (error: unknown) {
         if (cancelled) return;
         setLoad({
           status: "error",
           message: error instanceof Error ? error.message : "We could not find that checkout.",
         });
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [authLoading, sessionId, user]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

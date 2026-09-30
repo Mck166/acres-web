@@ -102,7 +102,7 @@ export default function FavoritesView() {
 
       try {
         await removeFromFavorites(user.uid, docId);
-        await refreshSeenProperties(user.uid);
+        await refreshSeenProperties();
       } catch (removeError) {
         console.error("Error removing favorite:", removeError);
         await loadFavorites(user.uid);

@@ -10,6 +10,7 @@ import { fetchPropertiesByIds, fetchTodayActivity, type Property } from "@/lib/a
 import { getAgentProfileBySlug, listOpenHouses, type AgentProfile, type OpenHouseRecord } from "@/lib/social";
 import { filterUpcomingOpenHouses, matchPropertyForOpenHouse } from "@/lib/openHouse";
 import { getSiteUrl } from "@/lib/site";
+import { httpUrl } from "@/lib/safeUrl";
 import styles from "./page.module.css";
 
 export default function AgentLandingPage() {
@@ -122,11 +123,15 @@ export default function AgentLandingPage() {
 
       {profile.about ? <p className={styles.about}>{profile.about}</p> : null}
       <div className={styles.links}>
-        {(profile.socialLinks || []).map((link) => (
-          <a key={link.url} href={link.url} target="_blank" rel="noreferrer">
-            {link.label || link.url}
-          </a>
-        ))}
+        {(profile.socialLinks || []).map((link) => {
+          const href = httpUrl(link.url);
+          if (!href) return null;
+          return (
+            <a key={href} href={href} target="_blank" rel="noopener noreferrer">
+              {link.label || href}
+            </a>
+          );
+        })}
       </div>
 
       <h2>Open houses</h2>

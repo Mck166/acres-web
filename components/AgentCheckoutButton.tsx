@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { startAgentCheckout, trackFunnel } from "@/lib/funnel";
 import { trackAgentInitiateCheckout } from "@/lib/metaPixel";
+import { isStripeCheckoutUrl } from "@/lib/safeUrl";
 import styles from "@/components/AgentCheckoutButton.module.css";
 
 type Props = {
@@ -31,6 +32,9 @@ export default function AgentCheckoutButton({
     trackFunnel("cta_click", { label: cta });
     try {
       const url = await startAgentCheckout(cta);
+      if (!isStripeCheckoutUrl(url)) {
+        throw new Error("Could not start checkout. Please try again.");
+      }
       trackAgentInitiateCheckout();
       // Give the pixel a moment to leave before Stripe replaces the page.
       window.setTimeout(() => window.location.assign(url), 300);

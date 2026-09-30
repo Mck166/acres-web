@@ -22,17 +22,11 @@ import { filterUpcomingOpenHouses, matchPropertyForOpenHouse } from "@/lib/openH
 import { displayNameOf, isAgentAccount } from "@/lib/slug";
 import { listOpenHouses, publishAgentProfile, unpublishAgentProfile, type OpenHouseRecord } from "@/lib/social";
 import { verifyEmailPath } from "@/lib/completeAuth";
+import { parseSocialLinkLines } from "@/lib/safeUrl";
 import styles from "./page.module.css";
 
 function parseLinks(text: string) {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((url) => ({
-      label: url.replace(/^https?:\/\//, ""),
-      url: url.includes("://") ? url : `https://${url}`,
-    }));
+  return parseSocialLinkLines(text);
 }
 
 function formatPhoneNumber(value: string) {
