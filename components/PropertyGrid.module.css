@@ -2,6 +2,41 @@
   width: 100%;
 }
 
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 18px 0 16px;
+}
+
+.summary p {
+  margin: 0;
+  color: var(--acres-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.note {
+  color: var(--acres-brown) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.summarySkeleton {
+  height: 18px;
+  width: min(280px, 70%);
+  margin: 18px 0 16px;
+  border-radius: 999px;
+  background: rgba(18, 19, 15, 0.08);
+}
+
+.cardSkeleton {
+  aspect-ratio: 4 / 3;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(91, 146, 121, 0.18), rgba(18, 19, 15, 0.06));
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr;

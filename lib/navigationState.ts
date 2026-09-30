@@ -1,4 +1,5 @@
 import type { Property } from "@/lib/api";
+import { LISTING_QUERY_KEYS } from "@/lib/listingBrowse";
 
 export const PROPERTIES_LIST_STATE_KEY = "acres:properties-list";
 
@@ -7,6 +8,10 @@ export type PropertiesListState = {
   cursor: string | null;
   hasMore: boolean;
   scrollY: number;
+  queryKey: string;
+  mode: "feed" | "search";
+  orderedIds: string[];
+  nextIndex: number;
 };
 
 export type MapViewParams = {
@@ -30,7 +35,19 @@ export function readPropertiesListState(): PropertiesListState | null {
   try {
     const raw = sessionStorage.getItem(PROPERTIES_LIST_STATE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as PropertiesListState;
+    const saved = JSON.parse(raw) as Partial<PropertiesListState>;
+    if (!saved || !Array.isArray(saved.properties)) return null;
+    return {
+      properties: saved.properties,
+      cursor: saved.cursor ?? null,
+      hasMore: Boolean(saved.hasMore),
+      scrollY: typeof saved.scrollY === "number" ? saved.scrollY : 0,
+      queryKey: saved.queryKey ?? "",
+      mode: saved.mode === "search" ? "search" : "feed",
+      orderedIds: Array.isArray(saved.orderedIds) ? saved.orderedIds : [],
+      nextIndex:
+        typeof saved.nextIndex === "number" ? saved.nextIndex : saved.properties.length,
+    };
   } catch {
     return null;
   }
@@ -85,7 +102,9 @@ export function buildMapHref(params: MapViewParams) {
 
 export function buildPropertyDetailHref(
   propertyId: string,
-  context: { from: "map"; map: Omit<MapViewParams, "property"> } | { from: "properties" },
+  context:
+    | { from: "map"; map: Omit<MapViewParams, "property"> }
+    | { from: "properties"; listQuery?: string },
 ) {
   const base = `/properties/${encodeURIComponent(propertyId)}`;
   const search = new URLSearchParams({ from: context.from });
@@ -94,6 +113,14 @@ export function buildPropertyDetailHref(
     search.set("lng", context.map.lng.toFixed(6));
     search.set("lat", context.map.lat.toFixed(6));
     search.set("zoom", context.map.zoom.toFixed(2));
+  }
+
+  if (context.from === "properties" && context.listQuery) {
+    const list = new URLSearchParams(context.listQuery);
+    for (const key of LISTING_QUERY_KEYS) {
+      const value = list.get(key);
+      if (value) search.set(key, value);
+    }
   }
 
   return `${base}?${search.toString()}`;
@@ -118,7 +145,13 @@ export function buildPropertyBackHref(propertyId: string, searchParams: URLSearc
   }
 
   if (from === "properties") {
-    return { href: "/properties?restore=1", label: "Back to listings" };
+    const next = new URLSearchParams();
+    for (const key of LISTING_QUERY_KEYS) {
+      const value = searchParams.get(key);
+      if (value) next.set(key, value);
+    }
+    next.set("restore", "1");
+    return { href: `/properties?${next.toString()}`, label: "Back to listings" };
   }
 
   return { href: "/properties", label: "Back to listings" };

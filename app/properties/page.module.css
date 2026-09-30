@@ -23,6 +23,13 @@
   color: var(--acres-brown);
 }
 
+.filtersFallback {
+  height: 220px;
+  margin-bottom: 8px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
 @media (max-width: 640px) {
   .hero h1 {
     font-size: 28px;
