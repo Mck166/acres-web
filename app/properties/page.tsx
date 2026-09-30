@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { fetchFeed, type Property } from "@/lib/api";
 import PropertyGrid from "@/components/PropertyGrid";
 import styles from "./page.module.css";
@@ -7,7 +8,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Properties",
-  description: "Browse homes for sale, save your favorites, and find your next property with Acres.",
+  description: "Browse homes for sale, filter by price and beds, save favorites, and find your next property with Acres.",
 };
 
 export default async function PropertiesPage() {
@@ -29,9 +30,20 @@ export default async function PropertiesPage() {
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
-        <h1>Properties</h1>
-        <p>Browse current listings, save the ones you like, and open any home for full details.</p>
+        <div className={styles.heroCopy}>
+          <p className={styles.kicker}>Browse listings</p>
+          <h1>Find a home that fits</h1>
+          <p>
+            Search by city or address, narrow by price and bedrooms, then open any listing for the
+            full story — or jump to the map when you want to look around.
+          </p>
+        </div>
+        <Link href="/map" className={styles.mapCta}>
+          Open map
+          <span aria-hidden="true">→</span>
+        </Link>
       </section>
+
       <PropertyGrid
         initialProperties={properties}
         initialCursor={nextCursor}

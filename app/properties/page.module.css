@@ -1,30 +1,81 @@
 .page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 20px 48px;
+  padding: 36px 20px 64px;
 }
 
 .hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 28px;
   margin-bottom: 28px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid rgba(18, 19, 15, 0.08);
+}
+
+.heroCopy {
+  max-width: 640px;
+}
+
+.kicker {
+  margin: 0 0 10px;
+  color: var(--acres-green);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .hero h1 {
-  margin: 0 0 8px;
-  font-size: 36px;
-  font-weight: 700;
+  margin: 0 0 10px;
+  font-size: clamp(32px, 5vw, 44px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.08;
   color: var(--acres-text, #12130f);
 }
 
 .hero p {
   margin: 0;
-  max-width: 640px;
-  font-size: 16px;
-  line-height: 1.5;
+  max-width: 54ch;
+  font-size: 17px;
+  line-height: 1.55;
   color: var(--acres-brown);
 }
 
+.mapCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgba(91, 146, 121, 0.35);
+  border-radius: 14px;
+  color: var(--acres-green);
+  font-size: 15px;
+  font-weight: 700;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.mapCta:hover {
+  background: rgba(91, 146, 121, 0.1);
+  border-color: var(--acres-green);
+}
+
 @media (max-width: 640px) {
-  .hero h1 {
-    font-size: 28px;
+  .page {
+    padding: 28px 20px 56px;
+  }
+
+  .hero {
+    margin-bottom: 22px;
+    padding-bottom: 22px;
+  }
+
+  .mapCta {
+    width: 100%;
+    justify-content: center;
   }
 }
