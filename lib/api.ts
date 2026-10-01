@@ -317,6 +317,42 @@ async function optionalAuthHeaders(): Promise<Record<string, string>> {
   }
 }
 
+export type ManagedUserPlan = "free" | "assistant";
+
+export type ManagedUser = {
+  uid: string;
+  name: string;
+  email: string;
+  account_type: "client" | "agent" | null;
+  plan: ManagedUserPlan;
+  admin_plan: ManagedUserPlan | null;
+  stripe_status: string | null;
+};
+
+export type ManagedUsersResponse = {
+  users: ManagedUser[];
+  total: number;
+  truncated: boolean;
+};
+
+export async function fetchManagedUsers(query: string, signal?: AbortSignal) {
+  const params = new URLSearchParams();
+  const q = query.trim();
+  if (q) params.set("q", q);
+  const suffix = params.toString() ? `?${params}` : "";
+  return authedRequest<ManagedUsersResponse>(`/admin/users${suffix}`, {
+    timeout: 20000,
+    signal,
+  });
+}
+
+export async function updateManagedUserPlan(uid: string, plan: ManagedUserPlan) {
+  return authedRequest<Pick<ManagedUser, "uid" | "plan" | "admin_plan">>(
+    `/admin/users/${encodeURIComponent(uid)}/subscription`,
+    { method: "POST", body: { plan }, timeout: 15000 },
+  );
+}
+
 async function authedRequest<T>(path: string, options: RequestOptions = {}) {
   const { getFirebaseAuth } = await import("@/lib/firebase");
   const user = getFirebaseAuth().currentUser;

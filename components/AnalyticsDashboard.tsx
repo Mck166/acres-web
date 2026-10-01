@@ -6,6 +6,7 @@ import { Chart, MetricCards, Ranked, type Metric } from "@/components/AnalyticsC
 import { useAuth } from "@/components/AuthProvider";
 import FunnelDashboard from "@/components/FunnelDashboard";
 import GlassButton from "@/components/GlassButton";
+import ManageUsers from "@/components/ManageUsers";
 import {
   addDays,
   fetchAnalyticsSummary,
@@ -31,17 +32,20 @@ import styles from "@/components/AnalyticsDashboard.module.css";
 
 type Theme = "light" | "dark";
 
-type View = "app" | "agents";
+type View = "app" | "agents" | "users";
 
 const VIEWS: { key: View; label: string; title: string; hash: string }[] = [
   { key: "app", label: "App", title: "App analytics", hash: "" },
   { key: "agents", label: "Agent sites", title: "Agent website sales", hash: "#agent-sites" },
+  { key: "users", label: "Users", title: "Manage users", hash: "#users" },
 ];
 
 // Links in the sale alert emails open straight onto the agent section.
 function initialView(): View {
   if (typeof window === "undefined") return "app";
-  return window.location.hash === "#agent-sites" ? "agents" : "app";
+  if (window.location.hash === "#agent-sites") return "agents";
+  if (window.location.hash === "#users") return "users";
+  return "app";
 }
 
 type Selection = { kind: "preset"; days: PresetDays } | { kind: "custom"; range: DateRange };
@@ -393,6 +397,7 @@ export default function AnalyticsDashboard() {
 
   const chooseView = (next: View) => {
     setView(next);
+    setPickerOpen(false);
     const hash = VIEWS.find((option) => option.key === next)?.hash ?? "";
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
   };
@@ -418,12 +423,14 @@ export default function AnalyticsDashboard() {
   const summary = snapshot?.summary ?? null;
   const funnelSummary = funnelSnapshot?.summary ?? null;
   const onApp = view === "app";
-  const failed = onApp ? failedKey === requestKey : funnelFailedKey === requestKey;
+  const onUsers = view === "users";
+  const failed = onUsers ? false : onApp ? failedKey === requestKey : funnelFailedKey === requestKey;
   const loading =
+    !onUsers &&
     isAdmin === true &&
     !failed &&
     (onApp ? loadedKey !== requestKey : funnelLoadedKey !== requestKey);
-  const shown = onApp ? summary : funnelSummary;
+  const shown = onUsers ? null : onApp ? summary : funnelSummary;
   const shownAt = onApp ? snapshot?.at : funnelSnapshot?.at;
   const shownLength = shown ? rangeLength(shown.range) : 0;
   const priorLabel = shownLength === 1 ? "previous day" : `previous ${shownLength} days`;
@@ -648,10 +655,12 @@ export default function AnalyticsDashboard() {
             </p>
             <h1>{VIEWS.find((option) => option.key === view)?.title}</h1>
             <p className={styles.lead}>
-              {shown
-                ? `${describeRange(shown.range, shown.endsToday)} against the ${priorLabel}, bucketed by Atlantic day.`
-                : "Loading…"}
-              {shownAt ? (
+              {onUsers
+                ? "Search for an account and set their assistant subscription."
+                : shown
+                  ? `${describeRange(shown.range, shown.endsToday)} against the ${priorLabel}, bucketed by Atlantic day.`
+                  : "Loading…"}
+              {!onUsers && shownAt ? (
                 <span className={styles.stamp}>
                   Updated{" "}
                   {new Date(shownAt).toLocaleTimeString("en-CA", {
@@ -678,6 +687,7 @@ export default function AnalyticsDashboard() {
               ))}
             </div>
 
+            {onUsers ? null : (
             <div className={styles.pickerWrap} ref={pickerRef}>
               <div className={styles.ranges} role="group" aria-label="Date range">
                 {PRESET_DAYS.map((option) => {
@@ -723,6 +733,7 @@ export default function AnalyticsDashboard() {
                 />
               ) : null}
             </div>
+            )}
 
             <button
               type="button"
@@ -752,7 +763,9 @@ export default function AnalyticsDashboard() {
           </div>
         </header>
 
-        {failed ? (
+        {onUsers ? <ManageUsers reloadToken={attempt} /> : null}
+
+        {!onUsers && failed ? (
           <div className={styles.status}>
             <p className={styles.error}>Could not load analytics. Please try again.</p>
             <GlassButton title="Try again" onClick={() => setAttempt((count) => count + 1)} />
@@ -767,7 +780,7 @@ export default function AnalyticsDashboard() {
           </div>
         ) : null}
 
-        {!onApp && funnelSummary ? (
+        {!onUsers && !onApp && funnelSummary ? (
           <div className={loading ? styles.stale : undefined}>
             <FunnelDashboard
               summary={funnelSummary}

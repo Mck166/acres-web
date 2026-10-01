@@ -290,7 +290,9 @@
   color-scheme: light;
 }
 
-.shell[data-theme="dark"] .dateInput {
+.shell[data-theme="dark"] .dateInput,
+.shell[data-theme="dark"] .userSearch input,
+.shell[data-theme="dark"] .planSelect {
   color-scheme: dark;
 }
 
@@ -592,6 +594,145 @@
   margin: 0;
   color: var(--faint);
   font-size: 13px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.userNote {
+  margin: -6px 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.userSearch {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.userSearch input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.userSearch input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.userStatus {
+  margin: 18px 0 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.userList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.userRow:first-child {
+  border-top: none;
+}
+
+.userIdentity {
+  min-width: 0;
+}
+
+.userName,
+.userEmail,
+.userMeta,
+.userRowError {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userName {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.userEmail,
+.userMeta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.userMeta {
+  margin-top: 2px;
+}
+
+.userRowError {
+  margin-top: 4px;
+  color: var(--down);
+  font-size: 13px;
+}
+
+.planControl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.userSaved {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.planSelect {
+  min-width: 132px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.planSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.planSelect:disabled {
+  cursor: progress;
+  opacity: 0.7;
 }
 
 /* Charts */
@@ -1280,6 +1421,16 @@
   .popover {
     left: 0;
     right: auto;
+  }
+
+  .userRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .planControl {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .rank {
